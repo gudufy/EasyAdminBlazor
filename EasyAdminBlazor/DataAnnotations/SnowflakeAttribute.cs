@@ -1,4 +1,5 @@
-﻿
+﻿namespace EasyAdminBlazor;
+
 [AttributeUsage(AttributeTargets.Property)]
 public class SnowflakeAttribute : Attribute
 {

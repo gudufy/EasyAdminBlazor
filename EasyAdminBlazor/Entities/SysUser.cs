@@ -3,6 +3,8 @@ using FreeSql.DataAnnotations;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 用户密码修改类，用于处理用户密码修改操作。
 /// </summary>

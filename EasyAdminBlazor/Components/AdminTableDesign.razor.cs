@@ -1,4 +1,5 @@
-﻿using FreeSql.DataAnnotations;
+﻿using EasyAdminBlazor;
+using FreeSql.DataAnnotations;
 using FreeSql.Internal.Model;
 using Microsoft.AspNetCore.Components;
 using Newtonsoft.Json;

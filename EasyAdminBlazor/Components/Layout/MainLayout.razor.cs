@@ -56,21 +56,43 @@ namespace EasyAdminBlazor.Components.Layout
             await base.OnInitializedAsync();
         }
 
+        /// <summary>
+        /// 页面权限验证
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
         async Task<bool> OnAuthorizing(string path)
         {
             await Task.Delay(100);
             return await admin.AuthPath(new Uri(path).AbsolutePath);
         }
 
+        /// <summary>
+        /// 退出登录
+        /// </summary>
+        /// <returns></returns>
         async Task LogoutClick()
         {
             await admin.SignOut();
             admin.RedirectLogin();
         }
-        private Task OnErrorHandleAsync(ILogger logger, Exception ex)
+
+        /// <summary>
+        /// 全局异常提醒
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        private async Task OnErrorHandleAsync(ILogger logger, Exception ex)
         {
-            System.Console.Error.WriteLine(ex);
-            return Task.CompletedTask;
+            logger.LogError(ex,ex.Message);
+
+            await SwalService.Show(new SwalOption()
+            {
+                Category = SwalCategory.Error,
+                Title = "天哪出错了...",
+                Content = ex.Message
+            });
         }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -3,6 +3,8 @@ using FreeSql;
 using FreeSql.Internal.Model;
 using System.Linq.Expressions;
 
+namespace EasyAdminBlazor;
+
 public static class FreeSqlExtensions
 {
     public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> expr1, Expression<Func<T, bool>> expr2)

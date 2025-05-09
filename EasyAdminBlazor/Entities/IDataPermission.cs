@@ -1,4 +1,6 @@
-﻿public interface IDataPermission
+﻿namespace EasyAdminBlazor;
+
+public interface IDataPermission
 {
     /// <summary>
     /// 获取或设置组织 ID

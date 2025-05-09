@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using Rougamo.Context;
 
+namespace EasyAdminBlazor;
+
 [AttributeUsage(AttributeTargets.Method)]
 public class AdminButtonAttribute
     : Rougamo.MoAttribute

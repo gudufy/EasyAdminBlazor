@@ -6,6 +6,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 修改接口
 /// </summary>

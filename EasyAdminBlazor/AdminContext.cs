@@ -8,6 +8,8 @@ using Microsoft.JSInterop;
 using System.Reflection;
 using Yitter.IdGenerator;
 
+namespace EasyAdminBlazor;
+
 public class AdminContext
 {
     public IServiceProvider Service { get; private set; }
@@ -146,18 +148,30 @@ public class AdminContext
     /// <returns>异步任务</returns>
     private async Task SetLoginCookie(string value, bool remember)
     {
+        await SetCookie("login", value,remember ? 15:-1);
+    }
+
+    /// <summary>
+    /// 设置cookies
+    /// </summary>
+    /// <param name="key"></param>
+    /// <param name="value"></param>
+    /// <param name="remember"></param>
+    /// <returns></returns>
+    public async Task SetCookie(string key,string value, int days=-1)
+    {
         if (HttpContext.WebSockets.IsWebSocketRequest)
         {
             // WebSocket 请求，调用 JS 方法设置 Cookie
-            await JS.InvokeVoidAsync("EasyAdminBlazorJS.setCookie", "login", value, remember ? 15 : -1);
+            await JS.InvokeVoidAsync("EasyAdminBlazorJS.setCookie", key, value, days);
         }
         else
         {
             // 普通请求，使用 HttpContext 设置 Cookie
-            HttpContext.Response.Cookies.Append("login", value, new CookieOptions
+            HttpContext.Response.Cookies.Append(key, value, new CookieOptions
             {
                 Path = "/",
-                Expires = remember ? DateTimeOffset.UtcNow.AddDays(15) : null
+                Expires = days>0 ? DateTimeOffset.UtcNow.AddDays(days) : null
             });
         }
     }

@@ -1,8 +1,11 @@
 ﻿using BootstrapBlazor.Components;
 using FreeSql.DataAnnotations;
+using Microsoft.Extensions.Localization;
 using MiniExcelLibs.Attributes;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+
+namespace EasyAdminBlazor;
 
 public interface IEntityCreated
 {

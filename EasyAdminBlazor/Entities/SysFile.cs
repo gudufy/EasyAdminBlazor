@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 文件
 /// </summary>

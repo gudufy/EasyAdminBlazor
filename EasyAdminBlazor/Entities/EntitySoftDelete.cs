@@ -2,6 +2,8 @@
 using FreeSql.DataAnnotations;
 using System.ComponentModel;
 
+namespace EasyAdminBlazor;
+
 public interface IEntitySoftDelete
 {
     /// <summary>

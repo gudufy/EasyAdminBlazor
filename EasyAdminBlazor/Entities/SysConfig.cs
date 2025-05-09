@@ -9,6 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 系统设置
 /// </summary>

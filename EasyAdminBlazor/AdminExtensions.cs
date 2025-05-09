@@ -1,4 +1,5 @@
-﻿using EasyAdminBlazor.Infrastructure;
+﻿using BootstrapBlazor.Components;
+using EasyAdminBlazor.Infrastructure;
 using EasyAdminBlazor.Infrastructure.Configuration;
 using EasyAdminBlazor.Infrastructure.Encrypt;
 using EasyAdminBlazor.Infrastructure.Logger;
@@ -6,12 +7,15 @@ using EasyAdminBlazor.Services;
 using FreeSql;
 using FreeSql.Aop;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Reflection;
 using System.Web;
 using Yitter.IdGenerator;
 using Console = System.Console;
+
+namespace EasyAdminBlazor;
 
 /// <summary>
 /// 管理 EasyAdminBlazor 相关配置的选项类
@@ -26,6 +30,11 @@ public class EasyAdminBlazorOptions
     /// 程序集数组，用于指定扫描的程序集
     /// </summary>
     public Assembly[] Assemblies { get; set; }
+
+    /// <summary>
+    /// 启用多语言
+    /// </summary>
+    public bool EnableLocalization { get; set; }
 }
 
 /// <summary>
@@ -179,6 +188,10 @@ public static class AdminExtensions
             return fsql;
         };
 
+        builder.Services.Configure<EasyAdminBlazorOptions>(adminOptions =>
+        {
+            adminOptions.EnableLocalization = options.EnableLocalization;
+        });
         // 注册 FreeSql 工厂为单例服务
         builder.Services.AddSingleton(fsqlFactory);
         // 注册 AdminContext 为作用域服务
@@ -257,6 +270,25 @@ public static class AdminExtensions
         builder.Services.AddHttpContextAccessor();
         // 添加 BootstrapBlazor 服务
         builder.Services.AddBootstrapBlazor();
+
+        // 增加多语言支持配置信息
+        builder.Services.AddSingleton<CommonLocalizer>();
+        if (options.EnableLocalization)
+        {
+            builder.Services.AddRequestLocalization<IOptionsMonitor<BootstrapBlazorOptions>>((localizerOption, blazorOption) =>
+            {
+                blazorOption.OnChange(Invoke);
+                Invoke(blazorOption.CurrentValue);
+                return;
+
+                void Invoke(BootstrapBlazorOptions option)
+                {
+                    var supportedCultures = option.GetSupportedCultures();
+                    localizerOption.SupportedCultures = supportedCultures;
+                    localizerOption.SupportedUICultures = supportedCultures;
+                }
+            });
+        }
 
         return builder;
     }

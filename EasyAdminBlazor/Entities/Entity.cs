@@ -3,6 +3,8 @@ using FreeSql.DataAnnotations;
 using MiniExcelLibs.Attributes;
 using System.ComponentModel;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 定义实体接口，包含主键属性。
 /// </summary>

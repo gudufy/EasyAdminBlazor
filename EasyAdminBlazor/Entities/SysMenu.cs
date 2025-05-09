@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Xml.Linq;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 菜单
 /// </summary>

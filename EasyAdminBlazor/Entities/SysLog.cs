@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
+namespace EasyAdminBlazor;
+
 public class SysLog : Entity<long>
 {
     /// <summary>

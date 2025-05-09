@@ -1,5 +1,7 @@
 ﻿using FreeSql.DataAnnotations;
 
+namespace EasyAdminBlazor;
+
 public class SysOperationLog:EntityCreated<long>
 {
     // 操作页面

@@ -2,6 +2,8 @@
 using FreeSql;
 using FreeSql.DataAnnotations;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 租户
 /// </summary>

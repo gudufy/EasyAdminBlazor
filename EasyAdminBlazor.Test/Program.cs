@@ -1,13 +1,18 @@
+using BootstrapBlazor.Components;
+using EasyAdminBlazor;
 using EasyAdminBlazor.Components;
 using EasyAdminBlazor.Test.Components;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddEasyAdminBlazor(new EasyAdminBlazorOptions
 {
-    Assemblies = [typeof(Program).Assembly]
+    Assemblies = [typeof(Program).Assembly],
+    EnableLocalization = false,
 });
 
 // Add services to the container.
@@ -28,6 +33,15 @@ builder.Services.Configure<HubOptions>(option => option.MaximumReceiveMessageSiz
 
 var app = builder.Build();
 
+// 启用本地化
+var option = app.Services.GetService<IOptions<RequestLocalizationOptions>>();
+if (option != null)
+{
+    app.UseRequestLocalization(option.Value);
+}
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.All });
+
 app.UseStaticFiles();
 
 app.UseAntiforgery();
@@ -41,6 +55,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseBootstrapBlazor();
 
 app.MapRazorPages();
 

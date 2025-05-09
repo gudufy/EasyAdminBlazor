@@ -1,26 +1,30 @@
 ﻿{
-  "EasyAdminBlazor.Server.Data.Foo": {
-    "Name": "姓名",
-    "DateTime": "日期",
-    "Address": "地址",
-    "Count": "数量",
-    "Complete": "是/否",
-    "Education": "学历",
-    "Hobby": "爱好",
-    "Name.Required": "{0}是必填项",
-    "Address.Required": "{0}是必填项",
-    "Education.Required": "{0}是必选项",
-    "Hobby.Required": "请选择一种{0}",
-    "Name.PlaceHolder": "不可为空",
-    "Hobbies": "游泳,登山,打球,下棋",
-    "Foo.Name": "张三 {0}",
-    "Foo.Address": "上海市普陀区金沙江路 {0} 弄",
-    "Foo.Address2": "地球、中国、上海市普陀区金沙江路 {0} 弄 这里是超长单元格示例",
-    "Foo.BindValue": "绑定值"
+  "EasyAdminBlazor.Common": {
+    "Import": "导入"
+  },
+  "EasyAdminBlazor.SysUser": {
+    "Username": "用户名",
+    "Nickname": "姓名",
+    "Mobile": "手机",
+    "Email": "邮箱",
+    "Password": "密码",
+    "IsEnabled": "有效",
+    "OrgId": "所属组织",
+    "Description": "备注",
+    "LoginTime": "最后登录时间",
+    "Roles": "角色",
+    "RoleIds": "角色",
+    "CreatedTime": "创建时间",
+    "CreatedUserName": "创建人",
+    "ModifiedTime": "修改时间",
+    "ModifiedUserName": "修改人"
   },
   "EasyAdminBlazor.Server.Data.EnumEducation": {
     "PlaceHolder": "请选择 ...",
     "Primary": "小学",
     "Middle": "中学"
+  },
+  "EasyAdminBlazor.Components.CultureChooser": {
+    "Label": "语言："
   }
 }

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Components;
 using Rougamo.Context;
 using System.Threading.Tasks;
 
+namespace EasyAdminBlazor;
+
 public class OperationLogService
 {
     private readonly IAggregateRootRepository<SysOperationLog> _repo;

@@ -1,5 +1,6 @@
 ﻿@page "/Admin/User"
 @using EasyAdminBlazor.Infrastructure.Encrypt
+@inject IStringLocalizer<SysUser> Localizer
 
 <Split Basis="160px" FirstPaneMinimumSize="160px" ShowBarHandle="false">
     <FirstPaneTemplate>
@@ -40,12 +41,12 @@
                         </div>
                     </EditTemplate>
                     <SearchTemplate Context="v">
-                        <FilterSelect DisplayText="角色" TType="IEnumerable<long>" Items="RoleItems" @bind-Value="v.RoleIds" />
+                        <FilterSelect DisplayText="@Localizer["Roles"]" TType="IEnumerable<long>" Items="RoleItems" @bind-Value="v.RoleIds" />
                     </SearchTemplate>
                 </TableColumn>
-                <TableColumn Width="160" @bind-Field="context.CreatedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="160" @bind-Field="context.CreatedTime" Filterable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
                 <TableColumn Width="120" @bind-Field="context.CreatedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="160" @bind-Field="context.ModifiedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="160" @bind-Field="context.ModifiedTime" Filterable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
                 <TableColumn Width="120" @bind-Field="context.ModifiedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
             </TableColumns>
         </AdminTable>

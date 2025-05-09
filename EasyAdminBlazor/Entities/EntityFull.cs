@@ -1,4 +1,5 @@
-﻿
+﻿namespace EasyAdminBlazor;
+
 /// <summary>
 /// 实体基类
 /// </summary>

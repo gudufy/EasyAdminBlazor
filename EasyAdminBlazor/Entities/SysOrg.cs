@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Xml.Linq;
 
+namespace EasyAdminBlazor;
+
 public class SysOrg : Entity, IHasParentId<long>
 {
     public enum OrgType

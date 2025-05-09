@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Xml.Linq;
 
+namespace EasyAdminBlazor;
+
 /// <summary>
 /// 角色
 /// </summary>

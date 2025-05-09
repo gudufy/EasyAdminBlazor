@@ -6,6 +6,8 @@ using Rougamo;
 using Rougamo.Context;
 using System.Threading.Tasks;
 
+namespace EasyAdminBlazor;
+
 [AttributeUsage(AttributeTargets.Method)]
 public class OperationLogAttribute : MoAttribute
 {

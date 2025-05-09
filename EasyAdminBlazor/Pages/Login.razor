@@ -153,12 +153,11 @@
     // 存储每个 IP 的登录失败次数
     static ConcurrentDictionary<string, int> limit = new();
 
-    /// <summary>
-    /// 组件初始化时异步执行的方法，用于初始化管理上下文，检查用户是否已登录，获取客户端 IP 地址。
-    /// </summary>
-    async protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        // 获取客户端 IP 地址
-        ip = admin.HttpContext.Connection?.RemoteIpAddress?.ToString() ?? "";
+        var clientInfo = await webClientService.GetClientInfo();
+        ip = clientInfo?.Ip ?? "::1";
+
+        await base.OnInitializedAsync();
     }
 }
