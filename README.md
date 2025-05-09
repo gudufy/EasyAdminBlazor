@@ -21,7 +21,7 @@
 ### 未来展望
 - **多租户**：支持多租户。
 
-![pay](https://github.com/gudufy/EasyAdminBlazor/blob/main/images/pay.png)
+![pay](https://github.com/gudufy/EasyAdminBlazor/blob/main/images/pay.jpg)
 
 ## 二、运行说明
 ### 运行环境
