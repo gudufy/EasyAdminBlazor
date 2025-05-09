@@ -21,24 +21,14 @@
 ### 未来展望
 - **多租户**：支持多租户。
 
+![pay](https://github.com/gudufy/EasyAdminBlazor/blob/main/images/pay.png)
+
 ## 二、运行说明
 ### 运行环境
 - **.NET SDK**：9.0
 
 ### 运行步骤
-1. **恢复 NuGet 包**：在项目根目录下执行以下命令恢复 NuGet 包。
-```bash
-dotnet restore
-```
-
-2. **启动项目**：在EasyAdminBlazor.Test目录下执行以下命令启动项目。
-```bash
-dotnet run
-```
-
-3. **访问应用**：在浏览器中访问 `http://localhost:5207` 即可查看应用。
-
-或者vs2022打开EasyAdminBlazor.sln，然后在EasyAdminBlazor.Test项目下的wwwroot文件夹右键“在浏览器中查看”
+vs2022打开EasyAdminBlazor.sln，然后在EasyAdminBlazor.Test项目下的wwwroot文件夹右键“在浏览器中查看”
 
 ## 三、系统截图
 
