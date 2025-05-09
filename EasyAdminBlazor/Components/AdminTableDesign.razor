@@ -1,0 +1,360 @@
+﻿@namespace BootstrapBlazor.Components
+
+<Modal @ref="modal" OnCloseAsync="OnClose">
+    <ModalDialog Title="@($"【增删改查-配置】{Menu?.Label}")">
+        <BodyTemplate>
+            @if (Menu != null)
+            {
+                <div class="card card-light card-tabs">
+
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="form-group col-8">
+                                <label class="form-label">实体类型 : IEntity&lt;&gt;</label>
+                                <select @oninput="EntityChanged" value="@design.TableDescrptor?.Type.FullName" class="form-control">
+                                    <option value="">请选择..</option>
+                                    @foreach (var t in tableDescrptors)
+                                    {
+                                        <option value="@t.Type.FullName">@t.Type.FullName @t.Comment</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group col-2">
+                                <label class="form-label">分页</label>
+                                <input @bind="curd_PageSize" type="number" class="form-control" disabled="@(design.TableDescrptor == null || !design.TreeNav.Key.IsNull())">
+                            </div>
+                            <div class="form-group col-2">
+                                <label class="form-label">编辑弹框</label>
+                                <select @bind="curd_DialogClassName" class="form-control" disabled="@(design.TableDescrptor == null || !(curd_IsAdd || curd_IsEdit))">
+                                    <option value="Small">Small</option>
+                                    <option value="Large">Large</option>
+                                    <option value="ExtraLarge">Extra large</option>
+                                    <option value="ExtraExtraLarge">Extra large XXL</option>
+                                    <option value="fullscreen">全屏</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-4 mt-3">
+                                <button @onclick="BuildBlazorCode" type="button" class="btn btn-success"><i class="fas fa-plus"></i> 生成 Blazor 代码</button>
+                            </div>
+                            <div class="form-group col-8 text-end  mt-3">
+                                <input @bind="curd_FormInLine" id="curd_FormInLine" type="checkbox" disabled="@(design.TableDescrptor == null)">
+                                <label for="curd_FormInLine">同行编辑</label>
+                                <input @bind="curd_IsAdd" id="curd_IsAdd" type="checkbox" disabled="@(design.TableDescrptor == null)">
+                                <label for="curd_IsAdd">允许插入</label>
+                                <input @bind="curd_IsEdit" id="curd_IsEdit" type="checkbox" disabled="@(design.TableDescrptor == null)">
+                                <label for="curd_IsEdit">允许编辑</label>
+                                <input @bind="curd_IsRemove" id="curd_IsRemove" type="checkbox" disabled="@(design.TableDescrptor == null)">
+                                <label for="curd_IsRemove">允许删除</label>
+                                <input @bind="curd_IsMultiSelect" id="curd_IsMultiSelect" type="checkbox" disabled="@(design.TableDescrptor == null)">
+                                <label for="curd_IsMultiSelect">允许多选</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (design.ColumnDesigns.Any())
+                    {
+                        <div class="card-header p-0 pt-1">
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item"><a @onclick="e => tabindex = 0" class="nav-link @(tabindex == 0 ? "active" : "")" style="cursor:pointer">基础</a></li>
+                                @if (design.OneToOnes.Any())
+                                {
+                                    <li class="nav-item"><a @onclick="e => tabindex = 1" class="nav-link @(tabindex == 1 ? "active" : "")" style="cursor:pointer">一对一</a></li>
+                                }
+                                @if (design.OneToManys.Any())
+                                {
+                                    <li class="nav-item"><a @onclick="e => tabindex = 2" class="nav-link @(tabindex == 2 ? "active" : "")" style="cursor:pointer">一对多</a></li>
+                                }
+                                @if (design.ManyToManys.Any())
+                                {
+                                    <li class="nav-item"><a @onclick="e => tabindex = 3" class="nav-link @(tabindex == 3 ? "active" : "")" style="cursor:pointer">多对多</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="card-body">
+                        <div class="tab-content" id="custom-tabs-two-tabContent">
+                            <div class="tab-pane show active" style="min-height:320px;">
+                                @if (tabindex == 0)
+                                {
+                                    @if (design.ColumnDesigns.Any())
+                                    {
+                                        var firstCanEdit = true;
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover table-bordered table-sm m-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>属性</th>
+                                                                <th>类型</th>
+                                                                <th>显示</th>
+                                                                <th>列表</th>
+                                                                <th>筛选</th>
+                                                                <th>文本搜索</th>
+                                                                <th>编辑</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var cd in design.ColumnDesigns)
+                                                            {
+                                                                <tr>
+                                                                    <td>@cd.Column.CsName</td>
+                                                                    <td>@GetGenericName(cd.Column.CsType)</td>
+                                                                    <td>@cd.DisplayText</td>
+                                                                    <td><input @bind="cd.IsDisplay" type="checkbox" @oninput="e => CheckBoxChanged(cd, 0, e.Value.ConvertTo<bool>())"></td>
+                                                                    <td>
+                                                                        @if (cd.Column.CsType.NullableTypeOrThis().IsEnum)
+                                                                        {
+                                                                            <input @bind="cd.IsSearchFilterEnum" type="checkbox">
+                                                                        }
+                                                                    </td>
+                                                                    <td><input @bind="cd.IsSearchText" type="checkbox" disabled="@(!cd.CanSearchText)" title="@cd.CanSearchTextTips"></td>
+                                                                    <td>
+                                                                        @if (cd.CanEdit)
+                                                                        {
+                                                                            <select @bind="cd.EditCol" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                                <option value="2">6列</option>
+                                                                                <option value="3">4列</option>
+                                                                                <option value="4">3列</option>
+                                                                                <option value="6">2列</option>
+                                                                                <option value="12">单行</option>
+                                                                            </select>
+                                                                            @if (firstCanEdit)
+                                                                            {
+                                                                                firstCanEdit = false;
+
+                                                                                <input type="button" @onclick="e => design.ColumnDesigns.ForEach(a => a.EditCol = cd.CanEdit ? cd.EditCol : a.EditCol)" value="ALL" class="btn btn-light btn-sm" />
+                                                                            }
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                                @if (!cd.ManyToOne.Key.IsNull())
+                                                                {
+                                                                    <tr>
+                                                                        <td style="background-color:#17a2b8;color:white;">@cd.Column.CsName@($" -> {cd.ManyToOne.Key}")</td>
+                                                                        <td style="background-color:#17a2b8;color:white;">多对一[Include]</td>
+                                                                        <td style="background-color:#17a2b8;color:white;">@cd.DisplayText</td>
+                                                                        <td><input @bind="cd.IsDisplayManyToOne" type="checkbox" @oninput="e => CheckBoxChanged(cd, 1, e.Value.ConvertTo<bool>())"></td>
+                                                                        <td><input @bind="cd.IsSearchFilterManyToOne" type="checkbox"></td>
+                                                                        <td></td>
+                                                                        <td>
+                                                                            @if (cd.CanEdit)
+                                                                            {
+                                                                                <select @bind="cd.EditStyle" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                                    <option value="0">文本框</option>
+                                                                                    <option value="1">下拉框</option>
+                                                                                    <option value="2">弹框</option>
+                                                                                </select>
+                                                                            }
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else if (tabindex == 1)
+                                {
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover table-bordered table-sm m-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>属性</th>
+                                                            <th>类型</th>
+                                                            <th>显示</th>
+                                                            <th>列表</th>
+                                                            <th>筛选</th>
+                                                            <th>文本搜索</th>
+                                                            <th>编辑</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var oneToOne in design.OneToOnes)
+                                                        {
+                                                            <tr>
+                                                                <td style="background-color:#17a2b8;color:white;">@($"@{oneToOne.Navigate.Key}.{oneToOne.Navigate.Value.RefColumns[0].CsName} -> {design.TableDescrptor.CsName}.{design.TableDescrptor.Primarys[0].CsName}")</td>
+                                                                <td style="background-color:#17a2b8;color:white;">一对一[Include]</td>
+                                                                <td style="background-color:#17a2b8;color:white;">@oneToOne.DisplayText</td>
+                                                                <td></td>
+                                                                <td></td>
+                                                                <td></td>
+                                                                <td>
+                                                                    <select @bind="oneToOne.EditStyle" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                        <option value="-1">不开启</option>
+                                                                        <option value="0">开启</option>
+                                                                        <option value="1">选项卡</option>
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                            foreach (var cd in oneToOne.RefColumnDesigns)
+                                                            {
+                                                                <tr>
+                                                                    <td>@cd.Column.CsName</td>
+                                                                    <td>@GetGenericName(cd.Column.CsType)</td>
+                                                                    <td>@cd.DisplayText</td>
+                                                                    <td><input @bind="cd.IsDisplay" type="checkbox"></td>
+                                                                    <td>
+                                                                        @if (cd.Column.CsType.NullableTypeOrThis().IsEnum)
+                                                                        {
+                                                                            <input @bind="cd.IsSearchFilterEnum" type="checkbox">
+                                                                        }
+                                                                    </td>
+                                                                    <td><input @bind="cd.IsSearchText" type="checkbox" disabled="@(!cd.CanSearchText)" title="@cd.CanSearchTextTips"></td>
+                                                                    <td>
+                                                                        @if (cd.CanEdit)
+                                                                        {
+                                                                            <select @bind="cd.EditCol" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                                <option value="3">4列</option>
+                                                                                <option value="4">3列</option>
+                                                                                <option value="6">2列</option>
+                                                                                <option value="12">单行</option>
+                                                                            </select>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (tabindex == 2)
+                                {
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover table-bordered table-sm m-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>属性</th>
+                                                            <th>类型</th>
+                                                            <th>显示</th>
+                                                            <th>列表</th>
+                                                            <th>编辑</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var oneToMany in design.OneToManys)
+                                                        {
+                                                            <tr>
+                                                                <td style="background-color:#b87e17;color:white;">@($"@{oneToMany.Navigate.Key}.{oneToMany.Navigate.Value.RefColumns[0].CsName} -> {design.TableDescrptor.CsName}.{design.TableDescrptor.Primarys[0].CsName}")</td>
+                                                                <td style="background-color:#b87e17;color:white;">一对多[IncludeMany]</td>
+                                                                <td style="background-color:#b87e17;color:white;">@oneToMany.DisplayText</td>
+                                                                <td></td>
+                                                                <td>
+                                                                    <select @bind="oneToMany.EditStyle" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                        <option value="-1">不开启</option>
+                                                                        <option value="0">开启</option>
+                                                                        <option value="1">选项卡</option>
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                            foreach (var cd in oneToMany.RefColumnDesigns)
+                                                            {
+                                                                <tr>
+                                                                    <td>@cd.Column.CsName</td>
+                                                                    <td>@GetGenericName(cd.Column.CsType)</td>
+                                                                    <td>@cd.DisplayText</td>
+                                                                    <td><input @bind="cd.IsDisplay" type="checkbox" @oninput="e => CheckBoxChanged(cd, 0, e.Value.ConvertTo<bool>())"></td>
+                                                                    <td>
+                                                                        @if (cd.CanEdit && oneToMany.EditStyle != -1)
+                                                                        {
+                                                                            <select @bind="cd.EditCol" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                                <option value="0">自动宽度</option>
+                                                                                <option value="60">60px</option>
+                                                                                <option value="80">80px</option>
+                                                                                <option value="100">100px</option>
+                                                                                <option value="120">120px</option>
+                                                                                <option value="150">150px</option>
+                                                                            </select>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                                @if (!cd.ManyToOne.Key.IsNull())
+                                                                {
+                                                                    <tr>
+                                                                        <td style="background-color:#17a2b8;color:white;">@cd.Column.CsName@($" -> {cd.ManyToOne.Key}")</td>
+                                                                        <td style="background-color:#17a2b8;color:white;">多对一[Include]</td>
+                                                                        <td style="background-color:#17a2b8;color:white;">@cd.DisplayText</td>
+                                                                        <td><input @bind="cd.IsDisplayManyToOne" type="checkbox" @oninput="e => CheckBoxChanged(cd, 1, e.Value.ConvertTo<bool>())"></td>
+                                                                        <td>
+                                                                            @if (cd.CanEdit && oneToMany.EditStyle != -1)
+                                                                            {
+                                                                                <select @bind="cd.EditStyle" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                                    <option value="0">文本框</option>
+                                                                                    <option value="1">下拉框</option>
+                                                                                    <option value="2">弹框</option>
+                                                                                </select>
+                                                                            }
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            }
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (tabindex == 3)
+                                {
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover table-bordered table-sm m-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>属性</th>
+                                                            <th>类型</th>
+                                                            <th>显示</th>
+                                                            <th>列表</th>
+                                                            <th>筛选</th>
+                                                            <th>编辑</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var manyToMany in design.ManyToManys)
+                                                        {
+                                                            <tr>
+                                                                <td style="background-color:#17a2b8;color:white;">@($"@{manyToMany.Navigate.Key}.{manyToMany.Navigate.Value.RefColumns[0].CsName} -> {design.TableDescrptor.CsName}.{design.TableDescrptor.Primarys[0].CsName}")</td>
+                                                                <td style="background-color:#17a2b8;color:white;">多对多[IncludeMany]</td>
+                                                                <td style="background-color:#17a2b8;color:white;">@manyToMany.DisplayText</td>
+                                                                <td><input @bind="manyToMany.IsDisplay" type="checkbox"></td>
+                                                                <td><input @bind="manyToMany.IsSearchFilter" type="checkbox"></td>
+                                                                <td>
+                                                                    <select @bind="manyToMany.EditStyle" disabled="@(!(curd_IsAdd || curd_IsEdit))">
+                                                                        <option value="-1">不开启</option>
+                                                                        <option value="0">列表页分配</option>
+                                                                        <option value="1">开启</option>
+                                                                        <option value="2">选项卡</option>
+                                                                        <option value="3">输入弹框</option>
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </BodyTemplate>
+    </ModalDialog>
+</Modal>

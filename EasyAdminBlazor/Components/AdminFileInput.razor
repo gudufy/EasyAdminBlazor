@@ -1,0 +1,30 @@
+﻿<div class="input-group">
+    <input @bind="@CurrentValue" type="text" readonly class="form-control" placeholder="" maxlength="255">
+    <button class="btn btn-outline-secondary" type="button" onclick="window.openfilepicker((url)=>{window.setpickervalue(this,url);})"><i class="fa-regular fa-folder-open"></i>选择...</button>
+
+</div>
+@if (!string.IsNullOrEmpty(Value))
+{
+    <div><a href="@Value" target="_blank"><img src="@Value" height="100" /></a></div>
+}
+
+@code {
+    [Parameter]
+    public string Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    private string CurrentValue
+    {
+        get => Value;
+        set
+        {
+            if (Value != value)
+            {
+                Value = value;
+                ValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+}

@@ -1,0 +1,79 @@
+﻿@page "/Admin/Profile"
+@attribute [TabItemOption(Text = "个人资料")]
+
+<Tab>
+    <TabItem Text="个人资料">
+        <div style="width:500px;">
+            <ValidateForm Model="@ProfileModel" OnValidSubmit="OnSaveProfileAsync">
+                <EditorForm TModel="UserProfile" RowType="RowType.Inline" ItemsPerRow="1">
+                    <Buttons>
+                        <div class="text-center">
+                            <Button ButtonType="ButtonType.Submit" Icon="fa-solid fa-floppy-disk" Text="保存"></Button>
+                        </div>
+                    </Buttons>
+                </EditorForm>
+            </ValidateForm>
+        </div>
+    </TabItem>
+    <TabItem Text="密码修改">
+        <div style="width:500px;">
+        <ValidateForm Model="@PwdModel" OnValidSubmit="OnSavePasswordAsync">
+            <EditorForm TModel="UserPassword" RowType="RowType.Inline" ItemsPerRow="1">
+                <FieldItems>
+                    <EditorItem @bind-Field="@context.OldPassword" ComponentType="typeof(BootstrapPassword)"></EditorItem>
+                    <EditorItem @bind-Field="@context.NewPassword" ComponentType="typeof(BootstrapPassword)"></EditorItem>
+                    <EditorItem @bind-Field="@context.ConfirmPassword" ComponentType="typeof(BootstrapPassword)"></EditorItem>
+                </FieldItems>
+                <Buttons>
+                    <div class="text-center">
+                            <Button ButtonType="ButtonType.Submit" Icon="fa-solid fa-floppy-disk" Text="保存"></Button>
+                    </div>
+                </Buttons>
+            </EditorForm>
+        </ValidateForm>
+        </div>
+    </TabItem>
+</Tab>
+
+@code {
+    [NotNull] private UserProfile? ProfileModel { get; set; }
+    [NotNull] private UserPassword? PwdModel { get; set; } = new UserPassword();
+
+    /// <summary>
+    /// OnInitialized 方法
+    /// </summary>
+    async protected override Task OnInitializedAsync()
+    {
+        ProfileModel = new UserProfile { Email=admin.User.Email, Mobile=admin.User.Mobile, Nickname=admin.User.Nickname };
+    }
+
+    [OperationLog("保存个人信息")]
+    async Task<bool> OnSaveProfileAsync(EditContext context)
+    {
+        if (context.Validate())
+        {
+            await admin.UpdateProfile(admin.User, ProfileModel);
+            await ToastService.Success("操作成功", "个人资料修改成功！");
+            return true;
+        }
+
+        return false;
+    }
+
+    [OperationLog("修改个人密码")]
+    async Task<bool> OnSavePasswordAsync(EditContext context)
+    {
+        if (context.Validate())
+        {
+            if (await admin.UpdatePassword(admin.User, PwdModel))
+            {
+                await ToastService.Success("操作成功", "密码修改成功！");
+                return true;
+            }
+
+            await ToastService.Error("操作失败", "密码修改失败，请确认原密码是否正确！");
+        }
+
+        return false;
+    }
+}

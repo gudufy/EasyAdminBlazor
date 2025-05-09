@@ -1,0 +1,29 @@
+﻿@typeparam TType
+
+<div class="col-12 col-sm-6 col-md-6">
+    <MultiSelect Items="@Items" @bind-Value="@CurrentValue" DisplayText="@DisplayText"></MultiSelect>
+</div>
+
+@code {
+    [Parameter]
+    public string DisplayText { get; set; }
+
+    [Parameter]
+    public List<SelectedItem> Items { get; set; }
+
+    [Parameter]
+    public TType? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<TType?> ValueChanged { get; set; }
+
+    private TType? CurrentValue
+    {
+        get => Value;
+        set
+        {
+            Value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+}

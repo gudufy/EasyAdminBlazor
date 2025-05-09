@@ -1,0 +1,185 @@
+﻿@page "/Admin/Role"
+
+<Split Basis="500px" FirstPaneMinimumSize="400px" ShowBarHandle="false">
+    <FirstPaneTemplate>
+        <AdminTable TItem="SysRole" EditDialogSize="Size.Large" ShowSearch="false" IsMultipleSelect="false" ClickToSelect ShowExtendButtons
+                    IncludePropertyName="Menus" OnSaveAsync="OnSaveAsync" OnDeleteAsync="OnDeleteAsync" OnClickRowCallback="OnClickRowCallback">
+            <TableColumns>
+                <TableColumn @bind-Field="context.Name" />
+                <TableColumn @bind-Field="context.Description" />
+                <TableColumn @bind-Field="context.DataPermission" Text="数据权限" />
+                <TableColumn @bind-Field="context.CustomDataPermission" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true" />
+            </TableColumns>
+            <EditTemplate>
+                <RoleEditTemplate Model="context" />
+            </EditTemplate>
+        </AdminTable>
+    </FirstPaneTemplate>
+    <SecondPaneTemplate>
+        <div>
+            <div>
+                <Button Color="Color.Primary" IsDisabled="select == null || (select != null && select.IsAdministrator)" OnClick="OnSaveMenu">保存</Button>
+                <Divider IsVertical />
+                <Checkbox TValue="bool" ShowAfterLabel="true" DisplayText="全选/反选" OnStateChanged="OnStateChanged" />
+            </div>
+            <Divider />
+            <TreeView @ref="menuTreeView" Items="TreeViewItems" IsDisabled="select != null && select.IsAdministrator" AutoCheckChildren AutoCheckParent ShowCheckbox></TreeView>
+        </div>
+        
+    </SecondPaneTemplate>
+</Split>
+
+@code{
+    [Inject] IAggregateRootRepository<SysRole> _repo { get; set; }
+    [Inject] IAggregateRootRepository<SysMenu> _repoMenu { get; set; }
+    [Inject] IEmailService _email { get; set; }
+
+    private List<TreeViewItem<long>> TreeViewItems { get; set; } = new();
+    private TreeView<long>? menuTreeView { get; set; }
+    private SysRole? select { get; set; } = null;
+
+    /// <summary>
+    /// 组件初始化时异步执行的方法，用于加载菜单数据并构建 TreeView 所需的菜单项列表
+    /// </summary>
+    /// <returns>表示异步操作的任务</returns>
+    async protected override Task OnInitializedAsync()
+    {
+        var menus = await _repoMenu.Select.ToListAsync();
+        TreeViewItems = menus.BuildTreeViews<SysMenu, long>(0, r => r.Label);
+    }
+
+    /// <summary>
+    /// 保存角色数据的异步操作方法，根据数据变更类型插入或更新角色数据
+    /// </summary>
+    /// <param name="item">要保存的角色对象</param>
+    /// <param name="changedType">数据变更类型，如插入、更新等</param>
+    /// <returns>表示操作是否成功的布尔值</returns>
+    [OperationLog]
+    private async Task<bool> OnSaveAsync(SysRole item, ItemChangedType changedType)
+    {
+        if (item.DataPermission == SysRole.DataPermissionType.自定义数据 && string.IsNullOrEmpty(item.CustomDataPermission))
+        {
+            await ToastService.Error("保存失败", "请选择自定义数据权限的部门");
+            return false;
+        }
+        if (item.DataPermission != SysRole.DataPermissionType.自定义数据)
+        {
+            item.CustomDataPermission = "";
+        }
+        await _repo.InsertOrUpdateAsync(item);
+        return true;
+    }
+
+    /// <summary>
+    /// 删除角色数据的异步操作方法，删除指定的角色记录
+    /// </summary>
+    /// <param name="rows">要删除的角色记录集合</param>
+    /// <returns>表示操作是否成功的布尔值</returns>
+    [OperationLog]
+    private async Task<bool> OnDeleteAsync(IEnumerable<SysRole> rows)
+    {
+        foreach (var foo in rows)
+        {
+            if (foo.IsAdministrator)
+            {
+                await ToastService.Error("删除角色", "超级管理员角色不允许删除");
+                return false;
+            }
+            await _repo.DeleteAsync(foo);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 保存角色菜单权限的异步操作方法，将 TreeView 中选中的菜单关联到当前角色并保存
+    /// </summary>
+    /// <returns>表示异步操作的任务</returns>
+    [AdminButton("alloc_menus")]
+    [OperationLog("修改角色菜单权限")]
+    private async Task OnSaveMenu()
+    {
+        select.Menus.Clear();
+        select.Menus.AddRange(menuTreeView.GetCheckedItems().Select(x => new SysMenu { Id = x.Value }));
+
+        await _repo.UpdateAsync(select);
+        await ToastService.Success("保存数据", "权限保存成功");
+    }
+
+    /// <summary>
+    /// 点击表格行时触发的回调方法，用于选中角色并更新 TreeView 中菜单项的选中状态
+    /// </summary>
+    /// <param name="row">被点击行对应的角色对象</param>
+    /// <returns>表示异步操作的任务</returns>
+    private async Task OnClickRowCallback(SysRole row)
+    {
+        select = row;
+        var roleMenuIds = row.Menus.Select(m => m.Id).ToList();
+
+        TraverseTreeItems(TreeViewItems, item =>
+        {
+            item.CheckedState = roleMenuIds.Contains(item.Value) ? CheckboxState.Checked : CheckboxState.UnChecked;
+        });
+
+        TreeViewItems = new List<TreeViewItem<long>>(TreeViewItems);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 全选/反选复选框状态改变时触发的方法，根据复选框状态进行全选或反选操作
+    /// </summary>
+    /// <param name="state">复选框的状态</param>
+    /// <param name="value">复选框的值，true 表示选中，false 表示未选中</param>
+    /// <returns>表示异步操作的任务</returns>
+    private async Task OnStateChanged(CheckboxState state, bool value)
+    {
+        if (value)
+        {
+            SetAllCheckedState(true);
+        }
+        else
+        {
+            InvertAllCheckedState();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// 设置所有菜单项选中状态的方法
+    /// </summary>
+    /// <param name="isChecked">是否选中，true 表示全选，false 表示全不选</param>
+    private void SetAllCheckedState(bool isChecked)
+    {
+        TraverseTreeItems(TreeViewItems, item => item.CheckedState = isChecked ? CheckboxState.Checked : CheckboxState.UnChecked);
+        TreeViewItems = new List<TreeViewItem<long>>(TreeViewItems);
+    }
+
+    /// <summary>
+    /// 反选所有菜单项选中状态的方法
+    /// </summary>
+    private void InvertAllCheckedState()
+    {
+        TraverseTreeItems(TreeViewItems, item =>
+        {
+            item.CheckedState = item.CheckedState == CheckboxState.Checked ? CheckboxState.UnChecked : CheckboxState.Checked;
+        });
+        TreeViewItems = new List<TreeViewItem<long>>(TreeViewItems);
+    }
+
+    /// <summary>
+    /// 递归遍历 TreeView 菜单项并执行指定操作的方法
+    /// </summary>
+    /// <param name="items">要遍历的菜单项列表</param>
+    /// <param name="action">要执行的操作</param>
+    private void TraverseTreeItems(List<TreeViewItem<long>> items, Action<TreeViewItem<long>> action)
+    {
+        foreach (var item in items)
+        {
+            action(item);
+            if (item.Items != null && item.Items.Count > 0)
+            {
+                TraverseTreeItems(item.Items, action);
+            }
+        }
+    }
+}

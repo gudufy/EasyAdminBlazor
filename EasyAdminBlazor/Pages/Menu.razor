@@ -1,0 +1,105 @@
+﻿@page "/Admin/Menu"
+@using System.Linq.Expressions
+
+<AdminTable @ref="menuTable" TItem="SysMenu" EditDialogSize="Size.Large" SortString="Sort Asc,Id Asc" ShowExtendButtons IsTree IsMultipleSelect
+            OnSaveAsync="OnSaveAsync" DefaultWhere="x => x.Type != SysMenuType.按钮">
+    <TableToolbarTemplate>
+        <div class="float-end" style="padding-left: 20px; padding-top: 5px;">
+            <Checkbox TValue="bool" State="CheckboxState.Checked" OnValueChanged="async (bool val) => { await menuTable.Reload(val ? null : x => x.Type != SysMenuType.按钮); }">
+                <span>显示按钮</span>
+            </Checkbox>
+        </div>
+    </TableToolbarTemplate>
+    <TableColumns>
+        <TableColumn @bind-Field="@context.ParentId" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true">
+            <EditTemplate Context="v">
+                <SelectTree @bind-Value="v.ParentId" TValue="long" Items="MenuTreeItems" OnValueChanged="async (long item) => await OnParentItemChanged(item,v)" />
+            </EditTemplate>
+        </TableColumn>
+        <TableColumn @bind-Field="context.Label">
+            <Template Context="v">
+                <span>@v.Value</span>
+                @if (v.Row.Type == SysMenuType.增删改查)
+                {
+                    <button @onclick="e => BeginDesignCrud(v.Row)" type="button" class="ml-2 btn btn-light btn-xs"><i class="fa fa-user-secret"></i>配置</button>
+                }
+            </Template>
+        </TableColumn>
+        <TableColumn @bind-Field="context.Path" />
+        <TableColumn @bind-Field="context.Icon" />
+        <TableColumn @bind-Field="context.Type" />
+        <TableColumn @bind-Field="context.Sort" />
+        <TableColumn @bind-Field="@context.Buttons" Text="按钮" Visible="false" IsVisibleWhenAdd="true">
+            <EditTemplate Context="v">
+                <div class="col-12 col-sm-12 col-md-12">
+                    <CheckboxList @ref="cblButtons" TValue="IEnumerable<string>" @bind-Value="@v.Buttons" Items="@CudButtons" />
+                </div>
+            </EditTemplate>
+        </TableColumn>
+    </TableColumns>
+</AdminTable>
+
+<AdminTableDesign Menu="menuDesign" OnClose="async () => menuDesign = null" />
+
+@code {
+    [Inject] IAggregateRootRepository<SysMenu> _repo { get; set; }
+
+    AdminTable<SysMenu> menuTable;
+
+    CheckboxList<IEnumerable<string>> cblButtons;
+
+    List<TreeViewItem<long>>? MenuTreeItems { get; set; }
+
+    List<SysMenu> Items { get; set; }
+
+    List<SelectedItem> CudButtons = new[] {
+        new SelectedItem("add","添加"),
+        new SelectedItem("edit","编辑"),
+        new SelectedItem("remove","删除")
+    }.ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        Items = await _repo.Select.Where(x => x.Type != SysMenuType.按钮).OrderBy(a => a.Sort).Where(x => x.Type != SysMenuType.按钮).ToListAsync();
+        MenuTreeItems = Items.BuildTreeViews<SysMenu, long>(0, r => r.Label);
+    }
+
+    /// <summary>
+    /// 异步保存菜单项，支持插入新菜单项或更新现有菜单项。
+    /// </summary>
+    /// <param name="item">要保存的菜单项对象。</param>
+    /// <param name="changedType">菜单项的变更类型。</param>
+    /// <returns>操作成功返回 <c>true</c>。</returns>
+    [OperationLog]
+    private async Task<bool> OnSaveAsync(SysMenu item, ItemChangedType changedType)
+    {
+        if(changedType == ItemChangedType.Add)
+        {
+            var sort = 10011;
+            item.Childs = new List<SysMenu>();
+            foreach (var btn in item.Buttons)
+            {
+                var cudBtn = CudButtons.First(x => x.Value == btn);
+                item.Childs.Add(new SysMenu { Label = cudBtn.Text, Path = cudBtn.Value, Sort = sort, Type = SysMenuType.按钮, IsSystem = true, });
+                sort++;
+            }
+        }
+
+        await _repo.InsertOrUpdateAsync(item);
+        return true;
+    }
+
+    SysMenu? menuDesign;
+    void BeginDesignCrud(SysMenu menu)
+    {
+        menuDesign = menu;
+    }
+    private async Task OnParentItemChanged(long menuId,SysMenu item)
+    {
+        var menu = Items.Where(x => x.Id == menuId).First();
+
+        item.Buttons = menu.ParentId > 0 ? [] : ["add", "edit", "remove"];
+    }
+}

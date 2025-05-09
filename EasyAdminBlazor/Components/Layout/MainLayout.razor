@@ -1,0 +1,94 @@
+﻿@inherits LayoutComponentBase
+
+<BootstrapBlazorRoot OnErrorHandleAsync="OnErrorHandleAsync">
+    <CascadingAuthenticationState>
+        <Layout ShowGotoTop="true" ShowCollapseBar="true" ShowFooter="@ShowFooter" SideWidth="0"
+                IsPage="true" IsFullSide="@IsFullSide" IsFixedHeader="@IsFixedHeader" IsFixedFooter="@IsFixedFooter"
+                ShowSplitBar="true" SidebarMinWidth="160" SidebarMaxWidth="350"
+                ShowToolbar="true" ShowTabContextMenu="true"
+                TabDefaultUrl="/Admin" UseTabSet="@UseTabSet" IsFixedTabHeader="IsFixedTabHeader" AdditionalAssemblies="@AppDomain.CurrentDomain.GetAssemblies()"
+                Menus="@Menus" OnAuthorizing="path=> OnAuthorizing(path)">
+            <Header>
+                <span class="ms-3 flex-sm-fill d-none d-sm-block">
+                    @if (admin.CurrentMenu != null)
+                    {
+                        <ol class="breadcrumb m-0 p-0">
+                            <li class="breadcrumb-item"><NavLink href="/Admin">主页</NavLink></li>
+                            @if (admin.CurrentMenu.Parent != null)
+                            {
+                                <li class="breadcrumb-item">@admin.CurrentMenu.Parent.Label</li>
+                            }
+                            <li class="breadcrumb-item active" aria-current="page">@admin.CurrentMenu?.Label</li>
+                        </ol>
+                    }
+                </span>
+                <div class="flex-fill d-sm-none">
+                </div>
+                @* <Widget></Widget> *@
+                @if (admin?.User != null)
+                {
+                    <Logout ImageUrl="images/Argo-C.png" DisplayName="@admin.User.Nickname" UserName="@admin.User.Username">
+                        <LinkTemplate>
+                            <NavLink href="/Admin/Profile"><i class="fa-solid fa-user"></i>个人资料</NavLink>
+                            <a @onclick="LogoutClick" href="/Admin/Login"><i class="fa-solid fa-arrow-right-to-bracket"></i><span>注销</span></a>
+                        </LinkTemplate>
+                    </Logout>
+                }
+
+                <div class="dropdown bb-theme-mode ms-2 d-none d-lg-block">
+                    <ThemeProvider></ThemeProvider>
+                </div>
+            </Header>
+            <Side>
+                <div class="layout-banner">
+                    <div class="layout-title">
+                        <span><a href="/" target="_blank" title="查看前台">EasyAdminBlazor</a></span>
+                    </div>
+                </div>
+            </Side>
+            <Main>
+                <CascadingValue Value="this" IsFixed="true">
+                    @if (admin.AuthPathSuccess)
+                    {
+                        @Body
+                    }
+                </CascadingValue>
+            </Main>
+            <Footer>
+                <div class="text-center flex-fill">
+                    <a class="page-layout-demo-footer-link" href="https://pro.blazor.zone/" target="_blank">Bootstrap Admin</a>
+                </div>
+            </Footer>
+            <NotFound>
+                <p>Sorry, there's nothing at this address.</p>
+            </NotFound>
+            <NotAuthorized>
+                @if (admin.IsLogin())
+                {
+                    <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
+                        <div class="text-center">
+                            <!-- 显示警告图标 -->
+                            <i class="fa-solid fa-triangle-exclamation text-warning mb-4" style="font-size:60px;"></i>
+                            <h1 class="display-6 fw-bold text-danger mb-3">无权限访问</h1>
+                            @if (admin.Roles.Count == 0)
+                            {
+                                <p class="lead mb-4">抱歉，您没有访问此页面的权限，未授予任何角色。</p>
+                            }
+                            else
+                            {
+                                <p class="lead mb-4">抱歉，您没有访问此页面的权限，请联系管理员获取更多帮助。</p>
+                            }
+                            <!-- 返回按钮 -->
+                            <a href="/Admin" class="btn btn-primary btn-lg" target="_top">返回主页</a>
+                        </div>
+                    </div>
+                }
+            </NotAuthorized>
+        </Layout>
+    </CascadingAuthenticationState>
+</BootstrapBlazorRoot>
+
+<div id="blazor-error-ui">
+    抱歉，当前程序产生了异常，异常详情请参见【错误日志】
+    <a href="" class="reload">刷新页面</a>
+</div>

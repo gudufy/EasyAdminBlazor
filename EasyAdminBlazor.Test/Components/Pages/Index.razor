@@ -1,0 +1,22 @@
+﻿@page "/Admin"
+@attribute [TabItemOption(Text = "主页", Closable = false)]
+
+<PageTitle>主页</PageTitle>
+
+<ErrorLogger ShowToast>
+    <Button OnClick="OnClick">点我</Button>
+</ErrorLogger>
+
+@code {
+    private Task OnErrorHandleAsync(ILogger logger, Exception ex)
+    {
+        System.Console.Error.WriteLine(ex);
+        return Task.CompletedTask;
+    }
+
+    void OnClick()
+    {
+        var a = 0;
+        _ = 1 / a;
+    }
+}

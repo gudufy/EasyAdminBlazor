@@ -1,0 +1,28 @@
+﻿@page "/Admin/Org"
+
+<AdminTable TItem="SysOrg" EditDialogSize="Size.Large" SortString="Sort Asc,Id Asc" ShowExtendButtons IsTree IsMultipleSelect>
+    <TableColumns>
+        <TableColumn @bind-Field="@context.ParentId" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true">
+            <EditTemplate Context="v">
+                <SelectTree @bind-Value="v.ParentId" TValue="long" Items="OrgTreeItems" />
+            </EditTemplate>
+        </TableColumn>
+        <TableColumn @bind-Field="context.Label" />
+        <TableColumn @bind-Field="context.Type" />
+        <TableColumn @bind-Field="context.Sort" DefaultSort DefaultSortOrder="SortOrder.Desc"/>
+        <TableColumn @bind-Field="context.Description" Rows="3" />
+    </TableColumns>
+</AdminTable>
+
+@code {
+    [Inject] IAggregateRootRepository<SysOrg> _repo { get; set; }
+
+    private static List<TreeViewItem<long>> OrgTreeItems { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        OrgTreeItems = (await _repo.Select.OrderBy(a => a.Sort).ToListAsync()).BuildTreeViews<SysOrg, long>(0, r => r.Label);
+    }
+}

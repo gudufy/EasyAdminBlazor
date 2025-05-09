@@ -1,0 +1,143 @@
+﻿@using EasyAdminBlazor.Services
+
+<div id="fileDialog">
+    <Card class="filebox">
+        <HeaderTemplate>
+            文件选择
+        </HeaderTemplate>
+        <BodyTemplate>
+            <Split Basis="200px">
+                <FirstPaneTemplate>
+                    <h5>分组 <a href="javascript:;" style="font-size:14px;" @onclick="() => OpenGroupInput()">添加分组</a></h5>
+                    <TreeView Items="@groups" OnTreeItemClick="@OnTreeItemClick"></TreeView>
+                </FirstPaneTemplate>
+                <SecondPaneTemplate>
+                    <ListView @ref="child" TItem="SysFile" IsPagination PageItems="15" OnQueryAsync="@OnQueryAsync" style="height:550px;">
+                        <HeaderTemplate>
+                            <div class="row">
+                                <div class="col-4">
+                                    <ButtonUpload @ref="buttonUpload" TValue="string" IsMultiple="true" ShowProgress="true" ShowUploadFileList="true" OnAllFileUploaded="@OnAllFileUploaded" OnChange="@OnClickToUpload" OnDelete="@(fileName => Task.FromResult(true))" BrowserButtonText="点击上传"></ButtonUpload>
+
+                                </div>
+                                <div class="col-4">
+                                    <Switch @bind-Value="fileReName" OnText="重命名文件" OffText="保持原文件名" OnColor="Color.Success" />
+                                </div>
+                                @if (child.Items.Where(x => x.IsSelect).Count() > 0)
+                                {
+                                    <div class="col-4">
+                                        <Button ButtonType="ButtonType.Button" Color="Color.Danger" Icon="fa-fw fa-solid fa-trash-alt" Text="删除所选文件" @onclick="async () => { await OnDeleteFiles(); }" />
+                                    </div>
+                                }
+                            </div>
+                        </HeaderTemplate>
+                        <BodyTemplate>
+                            <Card>
+                                <BodyTemplate>
+                                    <img src="@context.LinkUrl" height="120" width="180" title="点击选择" alt="@context.FileName" @onclick="() => OnListViewItemClick(context)" />
+                                    <p>@context.FileName</p>
+                                    <span style="position:absolute;right:10px; bottom:10px;"><Checkbox TValue="bool" @bind-Value="context.IsSelect" /> </span>
+                                </BodyTemplate>
+                            </Card>
+                        </BodyTemplate>
+                    </ListView>
+                </SecondPaneTemplate>
+            </Split>
+        </BodyTemplate>
+        <FooterTemplate>
+            <Button Text="取消" Color="Color.Secondary" OnClick="OnCloseFilePicker"></Button>
+        </FooterTemplate>
+    </Card>
+</div>
+
+@code {
+    ListView<SysFile> child;
+    ButtonUpload<string> buttonUpload;
+
+    [Inject] IAggregateRootRepository<SysFile> repo { get; set; }
+    [Inject] FileService fileService { get; set; }
+
+    List<TreeViewItem<string>> groups{ get; set; }
+    TreeViewItem<string> selectTree = null;
+    bool fileReName;
+
+    protected override void OnInitialized()
+    {
+        groups = fileService.GetGroups();
+    }
+
+    async Task OnDeleteFiles()
+    {
+        var selectIdList = child.Items.Where(x => x.IsSelect);
+        if (await SwalService.ShowModal(new SwalOption { Title = $"确定要删除选择的{selectIdList.Count()}个文件吗？", Content = "删除之后无法恢复！",Category= SwalCategory.Question }) == false) return;
+
+        foreach (var item in selectIdList)
+        {
+            await fileService.DeleteAsync(item.Id);
+        }
+
+        await child.QueryAsync();
+    }
+
+    async Task<QueryData<SysFile>> OnQueryAsync(QueryPageOptions options)
+    {
+        var select = repo.Select.WhereIf(selectTree != null && selectTree.Text != "所有文件", x => x.LinkUrl.Contains(selectTree.Text.Replace("\\",""))).OrderByDescending(x => x.CreatedTime).Page(options.PageIndex, options.PageItems);
+        return new QueryData<SysFile>()
+            {
+                Items = await select.ToListAsync(),
+                TotalCount = Convert.ToInt32(await select.CountAsync())
+            };
+    }
+
+    async Task OnTreeItemClick(TreeViewItem<string> item)
+    {
+        selectTree = item;
+        await child.QueryAsync();
+    }
+
+    List<UploadFile> uploadFiles { get; set; } = new List<UploadFile>();
+
+    async Task OnListViewItemClick(SysFile item)
+    {
+        await OnFileSelect(item);
+    }
+
+    async Task OnClickToUpload(UploadFile file)
+    {
+        if (file != null && file.File != null)
+        {
+            var result = await fileService.UploadFileAsync(file, selectTree?.Text, fileReName);
+            if (result != null)
+            {
+                file.PrevUrl = result.LinkUrl;
+            }
+
+            uploadFiles.Add(file);
+        }
+    }
+
+    async Task OnAllFileUploaded(IReadOnlyCollection<UploadFile> files)
+    {
+        await child.QueryAsync();
+        buttonUpload.Reset();
+    }
+
+    async Task OpenGroupInput()
+    {
+        var str = await JS.InvokeAsync<string>("prompt", "请输入分组名称：");
+        if (!string.IsNullOrEmpty(str))
+        {
+            fileService.AddGroup(str);
+            groups = fileService.GetGroups();
+        }
+    }
+
+    async Task OnCloseFilePicker()
+    {
+        await JS.InvokeAsync<object>("closefilepicker");
+    }
+
+    async Task OnFileSelect(SysFile item)
+    {
+        await JS.InvokeAsync<object>("filecallback", item.LinkUrl);
+    }
+}

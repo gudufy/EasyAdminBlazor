@@ -1,0 +1,164 @@
+﻿@page "/Admin/Login"
+@using EasyAdminBlazor.Infrastructure.Encrypt
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Http
+@using System.Collections.Concurrent
+@using System.Web
+@layout LayoutEmpty
+
+<PageTitle>系统登录 - EasyAdminBlazor</PageTitle>
+
+<div class="signin text-center">
+    <main class="form-signin w-100 m-auto">
+        <form>
+            <img class="mb-4" src="/favicon.png" alt="" width="72" height="57">
+            <h1 class="h3 mb-3 fw-normal">请登录</h1>
+
+            <FloatingLabel DisplayText="用户名" maxlength="30" @bind-Value="username" />
+            <FloatingLabel DisplayText="密码" type="password" maxlength="30" @bind-Value="password" OnEnterAsync="val => Submit()" />
+            <div class="checkbox mb-3 mt-3">
+                <label>
+                    <input type="checkbox" @bind="remember"> 记住本次登录
+                </label>
+            </div>
+            <Button class="w-100 btn btn-lg btn-primary" type="button" OnClick="Submit" IsAsync>登录</Button>
+            <p class="mt-5 mb-3 text-muted">&copy; 2025</p>
+        </form>
+        <Modal @ref="captchaModal" IsKeyboard="true">
+            <ModalDialog ShowHeader="false" ShowFooter="false" Class="captcha-dialog">
+                <BodyTemplate>
+                    <Captcha @ref="loginCaptcha" Max="9" OnValidAsync="@OnValidAsync" />
+                </BodyTemplate>
+            </ModalDialog>
+        </Modal>
+    </main>
+</div>
+
+@code {
+    [Inject] IFreeSql fsql { get; set; }
+    [Inject] WebClientService webClientService { get; set; }
+    [NotNull]
+    private Modal? captchaModal { get; set; }
+    [NotNull]
+    private Captcha? loginCaptcha { get; set; }
+    // 用户名
+    string username, password, ip;
+    // 是否记住登录状态
+    bool remember = true;
+    // 登录失败次数
+    int count = 0;
+
+    /// <summary>
+    /// 验证码验证成功后的回调方法
+    /// </summary>
+    /// <param name="ret">验证结果，true 表示验证成功</param>
+    private async Task OnValidAsync(bool ret)
+    {
+        if (ret)
+        {
+            // 验证成功，调用 SignIn 方法进行登录
+            await SignIn();
+        }
+    }
+
+    /// <summary>
+    /// 处理登录提交操作，验证用户输入，限制登录频率，记录登录日志，并根据结果进行相应提示或跳转。
+    /// </summary>
+    async Task Submit()
+    {
+        // 验证用户名和密码是否为空
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            // 若为空，使用 SwalService 显示警告信息
+            await SwalService.Warning("登陆失败！", "用户名或密码不能为空");
+            return;
+        }
+
+        // 错误一次后就要验证码
+        if (limit.TryGetValue(ip, out var errorCount) && errorCount >= 1)
+        {
+            // 显示验证码模态框
+            await captchaModal.Show();
+            return;
+        }
+
+        // 调用 SignIn 方法进行登录
+        await SignIn();
+    }
+
+    /// <summary>
+    /// 执行登录操作，查询用户信息，记录登录日志，根据结果进行提示或跳转
+    /// </summary>
+    async Task SignIn()
+    {
+        // 获取客户端信息
+        var clientInfo = await webClientService.GetClientInfo();
+        // 创建登录日志对象
+        var log = new SysLoginLog
+        {
+            LoginTime = DateTime.Now,
+            Username = username,
+            Browser = clientInfo.Browser,
+            City = clientInfo.City,
+            Device = clientInfo.Device,
+            Engine = clientInfo.Engine,
+            Ip = clientInfo.Ip,
+            Language = clientInfo.Language,
+            OS = clientInfo.OS,
+            UserAgent = clientInfo.UserAgent,
+        };
+        // 查询用户信息
+        var user = await fsql.Select<SysUser>().Where(a => a.Username == username).FirstAsync();
+        if (user == null || !PBKDF2Encrypt.VerifyPassword(password, user.Password))
+        {
+            // 登录失败，更新登录失败次数
+            count++;
+            limit.AddOrUpdate(ip, count, (_, __) => count);
+
+            // 设置登录日志类型为登录失败
+            log.Type = SysLoginLog.LoginType.登陆失败;
+            // 插入登录日志
+            await fsql.Insert(log).ExecuteAffrowsAsync();
+            // 使用 SwalService 显示错误信息
+            await SwalService.Error("登陆失败！", "用户名或密码不正确");
+            // 重置验证码
+            await loginCaptcha.Reset();
+            // 关闭验证码模态框
+            await captchaModal.Close();
+            return;
+        }
+
+        if (user.IsEnabled == false)
+        {
+            await SwalService.Error("登陆失败！", "帐号为禁用状态，不允许登录。");
+            return;
+        }
+
+        // 调用 AdminContext 的 SignIn 方法进行用户登录
+        await admin.SignIn(user, remember);
+        // 设置登录日志类型为登录成功
+        log.Type = SysLoginLog.LoginType.登陆成功;
+        // 插入登录日志
+        await fsql.Insert(log).ExecuteAffrowsAsync();
+
+        // 获取重定向 URL
+        var redirect = nav.GetQueryStringValue("Redirect");
+        if (string.IsNullOrEmpty(redirect)) redirect = "/Admin/";
+        // 重定向到指定页面
+        admin.Redirect(redirect);
+    }
+
+    // 移除登录限制的字符串
+    string removeLimit;
+    // 存储每个 IP 的登录失败次数
+    static ConcurrentDictionary<string, int> limit = new();
+
+    /// <summary>
+    /// 组件初始化时异步执行的方法，用于初始化管理上下文，检查用户是否已登录，获取客户端 IP 地址。
+    /// </summary>
+    async protected override Task OnInitializedAsync()
+    {
+        // 获取客户端 IP 地址
+        ip = admin.HttpContext.Connection?.RemoteIpAddress?.ToString() ?? "";
+    }
+}

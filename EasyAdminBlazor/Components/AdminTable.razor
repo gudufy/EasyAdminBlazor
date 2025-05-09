@@ -1,0 +1,315 @@
+﻿@using MiniExcelLibs
+@using System.Linq.Expressions
+@inherits Table<TItem>
+@attribute [CascadingTypeParameter(nameof(TItem))]
+@typeparam TItem where TItem : class, IEntity<long>, new()
+
+@{
+    base.BuildRenderTree(__builder);
+}
+
+
+@code {
+    [Inject] IAggregateRootRepository<TItem> _repo { get; set; }
+    [Inject] ITableExport TableExport { get; set; }
+    [Inject] DialogService DialogService { get; set; }
+
+    RenderFragment TableToolbarImportTemplate =>
+    @<Button OnClickWithoutRender="ShowImportDialog">
+    <span class="d-none d-sm-inline-block">导入</span>
+</Button>
+    ;
+
+    RenderFragment ImportDialogHeaderToolbarTemplate =>
+    @<Button OnClickWithoutRender="DownloadExcelTemplate">
+    <span class="d-none d-sm-inline-block">模板下载</span>
+</Button>
+    ;
+
+    //// <summary>
+    /// 动态贪婪加载属性名
+    /// </summary>
+    [Parameter]
+    public string? IncludePropertyName { get; set; }
+
+    /// <summary>
+    /// 是否显示导入按钮
+    /// </summary>
+    [Parameter]
+    public bool ShowImportButton { get; set; }
+
+    /// <summary>
+    /// 自定义导入逻辑
+    /// </summary>
+    [Parameter]
+    public Func<IEnumerable<TItem>, Task<int>>? OnImportAsync { get; set; }
+
+    /// <summary>
+    /// 导入数据转换处理
+    /// </summary>
+    [Parameter]
+    public Action<TItem>? ConvertImportItem { get; set; }
+
+    /// <summary>
+    /// 树型ParentId委托
+    /// </summary>
+    [Parameter]
+    public Func<TItem, long>? GetParentId { get; set; }
+
+    /// <summary>
+    /// 使用数据权限，如果开启则实体必须实现IDataPermission, IEntityCreated接口
+    /// </summary>
+    [Parameter]
+    public bool UseDataPermission { get; set; }
+
+    /// <summary>
+    /// 默认筛选条件
+    /// </summary>
+    [Parameter]
+    public Expression<Func<TItem, bool>>? DefaultWhere { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (ShowAddButton)
+        {
+            ShowAddButton = await admin.AuthButton("add");
+        }
+        if (ShowEditButton)
+        {
+            ShowEditButton = await admin.AuthButton("edit");
+        }
+        if (ShowDeleteButton)
+        {
+            ShowDeleteButton = await admin.AuthButton("remove");
+        }
+        if (ShowExtendEditButton)
+        {
+            ShowExtendEditButton = await admin.AuthButton("edit");
+        }
+        if (ShowExtendDeleteButton)
+        {
+            ShowExtendDeleteButton = await admin.AuthButton("remove");
+        }
+        if (ShowImportButton)
+        {
+            base.TableToolbarBeforeTemplate = TableToolbarImportTemplate;
+        }
+        if (OnExportAsync == null)
+        {
+            OnExportAsync = OnExportAllAsync;
+        }
+        if (OnQueryAsync == null)
+        {
+            OnQueryAsync = OnQueryDataAsync;
+        }
+        if (OnSaveAsync == null)
+        {
+            OnSaveAsync = OnSaveDataAsync;
+        }
+        if (OnDeleteAsync == null)
+        {
+            OnDeleteAsync = OnDeleteDataAsync;
+        }
+        if (IsTree)
+        {
+            TreeNodeConverter = (IEnumerable<TItem> items) =>
+            {
+                return TableTreeNodeConverter(items, GetParentId);
+            };
+        }
+        IsStriped = true;
+        IsBordered = true;
+        ShowSkeleton = false;
+        ShowToolbar = true;
+        ShowEmpty = true;
+        ShowLoading = true;
+        FixedExtendButtonsColumn = true;
+        AllowDragColumn = true;
+        ClientTableName = typeof(TItem).Name;
+        SearchDialogIsDraggable = true;
+        SearchDialogSize = Size.Large;
+        EmptyImage = EmptyImage ?? "/images/empty.svg";
+        PageItemsSource = new int[] { 20, 40, 80, 100 };
+
+        ModulePath = "/_content/BootstrapBlazor/Components/Table/Table.razor.js";
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// 异步执行数据导出操作
+    /// </summary>
+    /// <param name="context">表格导出上下文，包含导出相关的查询选项和列信息，泛型类型为 <see cref="TItem"/></param>
+    /// <returns>表示异步操作的任务</returns>
+    private async Task<bool> OnExportAllAsync(ITableExportDataContext<TItem> context)
+    {
+        var data = await _repo.Select.WhereIf(DefaultWhere != null, DefaultWhere).ApplyDataPermission(admin, UseDataPermission).IncludeByPropertyNameIf(IncludePropertyName!=null, IncludePropertyName).WhereDynamicFilter(context.Options.ToDynamicFilter()).ToListAsync();
+
+        return await TableExport.ExportExcelAsync(data, context.Columns, $"{typeof(TItem).Name}_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+    }
+
+    /// <summary>
+    /// 异步查询数据，并按分页选项返回结果。
+    /// </summary>
+    /// <param name="options">查询分页选项，包含过滤、排序和分页信息。</param>
+    /// <returns>包含查询到的列表和总记录数的 <see cref="QueryData{SysLog}"/> 对象。</returns>
+    private async Task<QueryData<TItem>> OnQueryDataAsync(QueryPageOptions options)
+    {
+        return await _repo.Select.WhereIf(DefaultWhere != null, DefaultWhere).ApplyDataPermission(admin, UseDataPermission).IncludeByPropertyNameIf(IncludePropertyName != null, IncludePropertyName).GetPagedAsync(options);
+    }
+
+    /// <summary>
+    /// 重新加载数据
+    /// </summary>
+    /// <param name="where">查询条件</param>
+    public async Task Reload(Expression<Func<TItem, bool>>? where)
+    {
+        this.DefaultWhere = where;
+        await this.QueryAsync(1);
+    }
+
+    /// <summary>
+    /// 异步保存。
+    /// </summary>
+    /// <param name="item">要保存的对象。</param>
+    /// <param name="changedType">变更类型。</param>
+    /// <returns>操作成功返回 <c>true</c>。</returns>
+    [OperationLog]
+    private async Task<bool> OnSaveDataAsync(TItem item, ItemChangedType changedType)
+    {
+        await _repo.InsertOrUpdateAsync(item);
+        return true;
+    }
+
+    /// <summary>
+    /// 异步删除选中的记录。
+    /// </summary>
+    /// <param name="rows">要删除的记录集合。</param>
+    /// <returns>操作成功返回 <c>true</c>。</returns>
+    [OperationLog]
+    private async Task<bool> OnDeleteDataAsync(IEnumerable<TItem> rows)
+    {
+        foreach (var item in rows)
+        {
+            await _repo.DeleteAsync(item);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 将菜单数据集合转换为表格所需的树形节点集合。
+    /// </summary>
+    /// <param name="items">待转换的菜单数据集合。</param>
+    /// <returns>包含转换后的树形节点集合的任务。</returns>
+    private static Task<IEnumerable<TableTreeNode<TItem>>> TableTreeNodeConverter(IEnumerable<TItem> items, Func<TItem, long>? getParentId)
+    {
+        // 构造树状数据结构
+        var ret = items.BuildTreeNodes<TItem, long>(0, getParentId);
+        return Task.FromResult(ret);
+    }
+
+    /// <summary>
+    /// 下载导入模板
+    /// </summary>
+    /// <returns></returns>
+    protected async Task DownloadExcelTemplate()
+    {
+        await TableExport.ExportExcelAsync(new List<TItem>(), base.Columns.Where(x => (x.Visible != false) && x.IsVisibleWhenAdd != false), new TableExportOptions { EnableAutoFilter = false }, $"{typeof(TItem).Name}_template.xlsx");
+    }
+
+    static long MaxFileLength => 5 * 1024 * 1024;  //文件最大5M
+    private CancellationTokenSource? ReadToken { get; set; }
+    //// <summary>
+    /// 显示导入窗口
+    /// </summary>
+    /// <returns></returns>
+    [AdminButton("add")]
+    protected async Task ShowImportDialog()
+    {
+        var op = new DialogOption()
+        {
+            IsKeyboard = IsKeyboard,
+            Size = Size.Medium,
+            Title = "数据导入",
+            HeaderToolbarTemplate = ImportDialogHeaderToolbarTemplate
+        };
+
+        op.Component = BootstrapDynamicComponent.CreateComponent<DropUpload>(new Dictionary<string, object?>
+        {
+            [nameof(DropUpload.ShowProgress)] = true,
+            [nameof(DropUpload.ShowFooter)] = true,
+            [nameof(DropUpload.Accept)] = ".xlsx",
+            [nameof(DropUpload.FooterText)] = $"注：文件大小不超过 5Mb，相同数据根据数据库的唯一键更新。",
+            [nameof(DropUpload.OnChange)] = async Task (UploadFile file) =>
+            {
+                if (file == null || file.File == null)
+                {
+                    return;
+                }
+
+                // 服务器端验证当文件大于 5MB 时提示文件太大信息
+                if (file.Size > MaxFileLength)
+                {
+                    await MessageService.Error("文件大小超过 5MB");
+                    file.Code = 1;
+                    file.Error = "文件大小超过 5MB";
+                    return;
+                }
+
+                ReadToken ??= new CancellationTokenSource();
+
+                try
+                {
+                    // 打开文件读取流
+                    using var browserStream = file.File.OpenReadStream(MaxFileLength, ReadToken.Token);
+                    // 创建 MemoryStream 用于存储文件内容
+                    using var memoryStream = new MemoryStream();
+                    // 将浏览器文件流内容复制到 MemoryStream
+                    await browserStream.CopyToAsync(memoryStream, ReadToken.Token);
+                    // 将 MemoryStream 位置重置到开头
+                    memoryStream.Position = 0;
+
+                    // 使用 MiniExcel 查询文件数据
+                    var rows = memoryStream.Query<TItem>().ToList();
+                    if (rows == null || !rows.Any())
+                    {
+                        await ToastService.Warning("Oh!", $"没有任何记录。");
+                        return;
+                    }
+
+                    // 导入数据处理
+                    if (ConvertImportItem != null)
+                    {
+                        Parallel.ForEach(rows, ConvertImportItem);
+                    }
+
+                    //如果没定义导入方法则用默认
+                    var updateColumns = base.Columns.Where(x => (x.Visible != false)).Select(x => x.GetFieldName()).ToArray();
+                    var affectedRows = OnImportAsync == null ? await _repo.Orm.InsertOrUpdate<TItem>().SetSource(rows).UpdateColumns(updateColumns).ExecuteAffrowsAsync() : await OnImportAsync(rows);
+
+                    if (affectedRows > 0)
+                    {
+                        // 添加操作日志
+                        ServiceProvider.GetService<OperationLogService>()?.AddLog(OperationType.导入, OperationResult.成功);
+
+                        // 重新查询数据
+                        await base.QueryAsync(1);
+                    }
+
+                    // 显示成功提示信息
+                    await ToastService.Success("导入结果", $"成功导入{rows.Count}条数据。");
+
+                    await op.CloseDialogAsync();
+                }
+                catch (Exception ex)
+                {
+                    ServiceProvider.GetService<OperationLogService>()?.AddLog(OperationType.导入, OperationResult.失败, failureReason: ex.ToString());
+                    await ToastService.Warning("导入失败", ex.Message);
+                }
+            }
+        });
+
+        await DialogService.Show(op);
+    }
+}

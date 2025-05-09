@@ -1,0 +1,17 @@
+@page "/Admin/ErrorLog"
+
+<AdminTable TItem="SysLog" ShowAddButton="false" ShowEditButton="false"
+            IsPagination IsAccordion ShowSearch IsDetails="true" IsMultipleSelect>
+    <TableColumns>
+        <TableColumn @bind-Field="@context.Category" Width="300" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="@context.Message" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="@context.CreatedTime" Width="160" Filterable="true" />
+    </TableColumns>
+    <DetailRowTemplate>
+        <pre>@context.Exception</pre>
+    </DetailRowTemplate>
+</AdminTable>
+
+@code {
+
+}

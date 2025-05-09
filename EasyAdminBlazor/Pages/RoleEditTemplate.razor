@@ -1,0 +1,32 @@
+﻿<div class="row form-inline g-3">
+    <div class="col-12 col-sm-6 col-md-6">
+        <BootstrapInput @bind-Value="Model.Name" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-6">
+        <BootstrapInput @bind-Value="Model.Description" />
+    </div>
+    <div class="col-12 col-sm-12 col-md-12">
+        <Select @bind-Value="Model.DataPermission" />
+    </div>
+    @if (Model.DataPermission == SysRole.DataPermissionType.自定义数据)
+    {
+        <div class="col-12 col-sm-12 col-md-12">
+            <MultiSelect @bind-Value="Model.CustomDataPermission" Items="OrgItems" Placeholder="请选择自定义部门" />
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] IAggregateRootRepository<SysOrg> _repoOrg { get; set; }
+
+    [Parameter]
+    [NotNull]
+    public SysRole? Model { get; set; }
+
+    private List<SelectedItem> OrgItems { get; set; }
+
+    async protected override Task OnInitializedAsync()
+    {
+        OrgItems = await _repoOrg.Select.Where(x => x.IsEnabled).ToListAsync(x => new SelectedItem(x.Id.ToString(), x.Label));
+    }
+}

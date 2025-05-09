@@ -1,0 +1,80 @@
+﻿@page "/Admin/Dict"
+
+<Split Basis="500px" FirstPaneMinimumSize="500px" ShowBarHandle="false">
+    <FirstPaneTemplate>
+        <AdminTable TItem="SysDict" EditDialogSize="Size.Large" ShowExtendButtons
+                    DefaultWhere="x => x.ParentId == 0" OnClickRowCallback="OnClickRowCallback">
+            <TableColumns>
+                <TableColumn @bind-Field="context.Name" />
+                <TableColumn @bind-Field="context.Description" />
+            </TableColumns>
+        </AdminTable>
+    </FirstPaneTemplate>
+    <SecondPaneTemplate>
+        @if (selectedCategory != null)
+        {
+            <AdminTable TItem="SysDict" EditDialogSize="Size.Large" ShowExtendButtons IsMultipleSelect OnQueryAsync="OnQueryItemAsync" OnSaveAsync="OnSaveItemAsync">
+                <TableColumns>
+                    <TableColumn @bind-Field="context.Name" />
+                    <TableColumn @bind-Field="context.Value" />
+                    <TableColumn @bind-Field="context.Description" Rows="3" />
+                </TableColumns>
+            </AdminTable>
+        }
+        else
+        {
+            <div class="alert alert-info" role="alert">
+                请选择一个字典分类查看字典项。
+            </div>
+        }
+    </SecondPaneTemplate>
+</Split>
+
+@code {
+    [Inject] IAggregateRootRepository<SysDict> _repo { get; set; }
+
+    private SysDict selectedCategory;
+
+    /// <summary>
+    /// 异步查询指定分类的字典项数据。
+    /// </summary>
+    /// <param name="options">查询分页选项。</param>
+    /// <returns>查询数据结果。</returns>
+    private async Task<QueryData<SysDict>> OnQueryItemAsync(QueryPageOptions options)
+    {
+        var query = _repo.Select.Where(x => x.ParentId == selectedCategory.Id)
+                                .WhereDynamicFilter(options.ToDynamicFilter());
+        var items = await query.OrderBy(a => a.Id).ToListAsync();
+
+        return new QueryData<SysDict>
+        {
+            Items = items,
+            TotalCount = items.Count
+        };
+    }
+
+    /// <summary>
+    /// 异步保存字典项。
+    /// </summary>
+    /// <param name="item">字典对象。</param>
+    /// <param name="changedType">变更类型。</param>
+    /// <returns>操作结果。</returns>
+    [OperationLog("{0}字典项")]
+    private async Task<bool> OnSaveItemAsync(SysDict item, ItemChangedType changedType)
+    {
+        item.ParentId = selectedCategory.Id;
+        await _repo.InsertOrUpdateAsync(item);
+        return true;
+    }
+
+    /// <summary>
+    /// 处理字典分类选中事件。
+    /// </summary>
+    /// <param name="args">事件参数。</param>
+    private async Task OnClickRowCallback(SysDict row)
+    {
+        selectedCategory = row;
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

@@ -1,0 +1,24 @@
+@page "/Admin/LoginLog"
+<AdminTable TItem="SysLoginLog" IsPagination ShowAdvancedSearch ShowSearch ShowExportButton
+            ShowAddButton="false" ShowEditButton="false" ShowDeleteButton="false">
+    <TableColumns>
+        <TableColumn @bind-Field="context.LoginTime" Width="160" Text="登录时间" Filterable="true" Sortable="true" />
+        <TableColumn @bind-Field="context.Username"  Text="用户名" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.Type" Text="登录结果" Filterable="true" Searchable="true">
+            <Template Context="v">
+                <div class="@(v.Value == SysLoginLog.LoginType.登陆失败 ? "text-danger" : "")">@v.Value</div>
+            </Template>
+        </TableColumn>
+        <TableColumn @bind-Field="context.Ip"  Text="Ip" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.City"  Text="城市" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.Browser"  Text="浏览器" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.OS"  Text="操作系统" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.Device"  Text="设备"  />
+        <TableColumn @bind-Field="context.Language"  Text="语言" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.UserAgent"  Text="UserAgent" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.Engine"  Text="Engine" Filterable="true" Searchable="true" />
+    </TableColumns>
+</AdminTable>
+@code {
+
+}

@@ -1,0 +1,31 @@
+﻿@typeparam TValue
+
+@if (Key.Contains("Enable"))
+{
+    <Select @bind-Value="CurrentValue">
+        <Options>
+            <SelectOption Text="是" Value="True" Active="true" />
+            <SelectOption Text="否" Value="False" />
+        </Options>
+    </Select>
+}
+else
+{
+    <BootstrapInput @bind-Value="CurrentValue" />
+}
+@code {
+    [Parameter]
+    public Dictionary<string, TValue> Dictionary { get; set; }
+
+    [Parameter]
+    public string Key { get; set; }
+
+    [Parameter]
+    public string Label { get; set; }
+
+    private TValue CurrentValue
+    {
+        get => Dictionary.TryGetValue(Key, out var value) ? value : default;
+        set => Dictionary[Key] = value;
+    }
+}

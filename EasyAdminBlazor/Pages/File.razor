@@ -1,0 +1,94 @@
+﻿@page "/Admin/File"
+
+<AdminTable TItem="SysFile" ShowEditButton="false" AddModalTitle="文件上传" AddButtonText="上传"
+            IsMultipleSelect IsPagination ShowSearch ShowExtendButtons ShowExtendEditButton="false"
+       OnSaveAsync="OnSaveAsync" OnDeleteAsync="OnDeleteAsync">
+    <TableColumns>
+        <TableColumn @bind-Field="context.FileName" Filterable="true" Searchable="true">
+            <Template Context="v"><a href="@v.Row.LinkUrl" target="_blank">@v.Value</a></Template>
+        </TableColumn>
+        <TableColumn @bind-Field="context.Extension" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.SizeFormat" />
+        <TableColumn @bind-Field="context.CreatedUserName" Filterable="true" Searchable="true" />
+        <TableColumn @bind-Field="context.CreatedTime" Filterable="true" Sortable="true" />
+    </TableColumns>
+    <EditTemplate>
+        <div>选择一个或多个文件后，再点保存。</div>
+        <CardUpload TValue="string" IsMultiple ShowProgress="true" OnChange="@OnCardUpload" OnDelete="@(fileName => Task.FromResult(true))"></CardUpload>
+    </EditTemplate>
+</AdminTable>
+
+@code {
+    [Inject] IAggregateRootRepository<SysFile> _repo { get; set; }
+    [Inject] Services.FileService fileService { get; set; }
+    List<UploadFile> uploadFiles { get; set; } = new List<UploadFile>();
+
+    /// <summary>
+    /// 异步保存文件。
+    /// </summary>
+    /// <param name="item">字典对象。</param>
+    /// <param name="changedType">变更类型。</param>
+    /// <returns>操作结果。</returns>
+    [OperationLog("上传文件")]
+    private async Task<bool> OnSaveAsync(SysFile item, ItemChangedType changedType)
+    {
+        var op = new SwalOption()
+        {
+            Category = SwalCategory.Information,
+            Title = "请稍候...",
+            Content = "文件正在上传中！",
+            ShowClose = false
+        };
+
+        await SwalService.Show(op);
+
+        var total = 0;
+        foreach (var file in uploadFiles)
+        {
+            var result = await fileService.UploadFileAsync(file);
+            if (result != null)
+            {
+                file.PrevUrl = result.LinkUrl;
+                total++;
+            }
+        }
+
+        await op.CloseAsync();
+
+        uploadFiles.Clear();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 异步删除字典项或文件。
+    /// </summary>
+    /// <param name="rows">待删除的字典对象集合。</param>
+    /// <returns>操作结果。</returns>
+    [OperationLog]
+    private async Task<bool> OnDeleteAsync(IEnumerable<SysFile> rows)
+    {
+        foreach (var item in rows)
+        {
+            await fileService.DeleteAsync(item.Id);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 选择文件
+    /// </summary>
+    /// <param name="file"></param>
+    /// <returns></returns>
+    async Task OnCardUpload(UploadFile file)
+    {
+        if (file != null && file.File != null)
+        {
+            if ((file.GetExtension()??"").IsImage())
+            {
+                await file.RequestBase64ImageFileAsync("png", 200, 200);
+            }
+            uploadFiles.Add(file);
+        }
+    }
+}

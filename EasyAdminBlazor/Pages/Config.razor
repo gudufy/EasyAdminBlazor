@@ -1,0 +1,202 @@
+﻿@page "/Admin/Config"
+@using EasyAdminBlazor.Infrastructure.Configuration
+
+<Tab>
+    <TabItem Text="系统配置">
+        <form @onsubmit="OnSaveSettings">
+            <div class="row g-3 mt-2">
+                <h5>Smtp参数</h5>
+                <div class="col-2 col-form-label">
+                    <span>服务地址</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:Server" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>端口</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:Port" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>用户名</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:Username" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>密码</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:Password" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>发件人</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:FromName" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>发件邮箱</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:FromEmail" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>启用SSL</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="SmtpSettings:EnableSsl" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>邮件测试</span>
+                </div>
+                <div class="col-10">
+                    <BootstrapInputGroup>
+                        <BootstrapInput @bind-Value="@testEmail" PlaceHolder="收件人邮件地址" />
+                        <Button Text="发送" OnClick="OnTestEmailClick" IsAsync></Button>
+                    </BootstrapInputGroup>
+                </div>
+                <h5>阿里云短信参数</h5>
+                <div class="col-2 col-form-label">
+                    <span>AccessKeyId</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="Aliyun:Sms:AccessKeyId" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>AccessKeySecret</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="Aliyun:Sms:AccessKeySecret" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>签名</span>
+                </div>
+                <div class="col-10">
+                    <AdminDictionaryInput TValue="string" Dictionary="@Settings" Key="Aliyun:Sms:SignName" />
+                </div>
+                <div class="col-2 col-form-label">
+                    <span>短信测试</span>
+                </div>
+                <div class="col-10">
+                    <BootstrapInputGroup>
+                        <BootstrapInput @bind-Value="@testMobile" PlaceHolder="收信人手机号" />
+                        <Button Text="发送" OnClick="OnTestSmsClick" IsAsync></Button>
+                    </BootstrapInputGroup>
+                </div>
+                <div class="col-2 col-form-label">
+                    <span></span>
+                </div>
+                <div class="col-10">
+                    <Button ButtonType="ButtonType.Submit" Icon="fa-solid fa-floppy-disk" Text="保存"></Button>
+                </div>
+                
+            </div>
+        </form>
+    </TabItem>
+    <TabItem Text="自定义">
+        <AdminTable TItem="SysConfig" ShowExtendButtons IsMultipleSelect EditDialogSize="Size.Large"
+                    DefaultWhere="@(x => !x.Code.Contains(":"))" class="mt-2" style="height:auto;">
+            <TableColumns>
+                <TableColumn @bind-Field="context.Code" />
+                <TableColumn @bind-Field="context.Name" />
+                <TableColumn @bind-Field="context.Content" Cols="12" />
+                <TableColumn Width="160" @bind-Field="context.CreatedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="120" @bind-Field="context.CreatedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="160" @bind-Field="context.ModifiedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="120" @bind-Field="context.ModifiedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+            </TableColumns>
+        </AdminTable>
+    </TabItem>
+</Tab>
+
+@code {
+    [Inject] IAggregateRootRepository<SysConfig> _repo { get; set; }
+    [Inject] IConfiguration _configuration { get; set; }
+    [Inject] IEmailService _email { get; set; }
+    [Inject] ISmsService _sms { get; set; }
+    Dictionary<string,string> Settings { get; set; }
+    string testEmail{ get; set; }
+    string testMobile { get; set; }
+
+    /// <summary>
+    /// OnInitialized 方法
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        Settings = _repo.Select.Where(x => x.Code.Contains(":")).ToDictionary(x=>x.Code,x=>x.Content);
+    }
+
+    /// <summary>
+    /// 保存配置
+    /// </summary>
+    /// <param name="args"></param>
+    /// <exception cref="NotImplementedException"></exception>
+    [OperationLog("修改配置信息")]
+    private async Task OnSaveSettings(EventArgs args)
+    {
+        // 转换 Settings 字典为 SysConfig 对象列表
+        var items = await _repo.Select.Where(x => x.Code.Contains(":")).ToListAsync();
+        var updateItems = items.Select(kvp => new SysConfig
+        {
+            Id = kvp.Id,
+            Code = kvp.Code,
+            Content = Settings[kvp.Code]
+        }).ToList();
+
+        var affectedRows = await _repo.Orm.Update<SysConfig>()
+            .SetSource(updateItems)
+            .UpdateColumns(x => x.Content)
+            .ExecuteAffrowsAsync();
+
+        (_configuration as IConfigurationRoot)?.Reload();
+
+        await ToastService.Success("操作成功", "配置项已成功保存。");
+    }
+
+    /// <summary>
+    /// 发送测试邮件
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    private async Task OnTestEmailClick(MouseEventArgs args)
+    {
+        if (Settings.Values.Any(string.IsNullOrEmpty))
+        {
+            await MessageService.Error("Smtp参数必须全部填写！");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(testEmail))
+        {
+            await MessageService.Error("请输入正确的邮件地址！");
+            return;
+        }
+
+        var result = await _email.SendEmailAsync(testEmail, "这是一封测试邮件", "这是测试内容");
+
+        await SwalService.Show(new SwalOption {  
+            Category=result ? SwalCategory.Success : SwalCategory.Error,
+            Title="测试结果",
+            Content = result ? "邮件发送成功。":"邮件发送失败，异常信息请查看【错误日志】"
+        });
+    }
+
+    /// <summary>
+    /// 发送测试短信
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private async Task OnTestSmsClick(MouseEventArgs args)
+    {
+        if (string.IsNullOrEmpty(testMobile))
+        {
+            await MessageService.Error("请输入正确的手机号！");
+            return;
+        }
+
+        await _sms.SendSmsAsync(testMobile, "", "");
+    }
+}

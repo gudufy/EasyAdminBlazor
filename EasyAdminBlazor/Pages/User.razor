@@ -1,0 +1,142 @@
+﻿@page "/Admin/User"
+@using EasyAdminBlazor.Infrastructure.Encrypt
+
+<Split Basis="160px" FirstPaneMinimumSize="160px" ShowBarHandle="false">
+    <FirstPaneTemplate>
+        <TreeView Items="@OrgTreeItems" OnTreeItemClick="OnTreeItemClick"></TreeView>
+    </FirstPaneTemplate>
+    <SecondPaneTemplate>
+        <AdminTable @ref="table" TItem="SysUser" EditDialogSize="Size.ExtraLarge" ShowImportButton ShowExportButton ShowExtendButtons ShowAdvancedSearch IsMultipleSelect IsPagination ShowSearch
+                    OnSaveAsync="OnSaveAsync" OnDeleteAsync="OnDeleteAsync" IncludePropertyName="Roles" ConvertImportItem="ConvertImportItem">
+            <TableColumns>
+                <TableColumn @bind-Field="context.Username" Filterable="true" Searchable="true" />
+                <TableColumn @bind-Field="@context.Password" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true">
+                    <EditTemplate Context="v">
+                        <div class="col-12 col-sm-6">
+                            <BootstrapInput TValue="string" @bind-Value="v.Password" PlaceHolder="请输入 ..." type="password" minlength="6" />
+                        </div>
+                    </EditTemplate>
+                </TableColumn>
+                <TableColumn @bind-Field="context.Nickname" Filterable="true" Searchable="true" />
+                <TableColumn @bind-Field="context.Description" Filterable="true" Searchable="true" />
+                <TableColumn @bind-Field="context.IsEnabled" Filterable="true" Searchable="true" />
+                <TableColumn @bind-Field="@context.OrgId" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true">
+                    <EditTemplate Context="v">
+                        <div class="col-12">
+                            <SelectTree @bind-Value="v.OrgId" TValue="long" Items="OrgTreeItems" />
+                        </div>
+                    </EditTemplate>
+                </TableColumn>
+                <TableColumn @bind-Field="@context.Roles" Searchable="true">
+                    <Template Context="v">
+                        @foreach (var role in v.Value)
+                        {
+                            <Tag>@role.Name</Tag>
+                        }
+                    </Template>
+                    <EditTemplate Context="v">
+                        <div class="col-12">
+                            <CheckboxList TValue="IEnumerable<long>" @bind-Value="v.RoleIds" Items="RoleItems" />
+                        </div>
+                    </EditTemplate>
+                    <SearchTemplate Context="v">
+                        <FilterSelect DisplayText="角色" TType="IEnumerable<long>" Items="RoleItems" @bind-Value="v.RoleIds" />
+                    </SearchTemplate>
+                </TableColumn>
+                <TableColumn Width="160" @bind-Field="context.CreatedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="120" @bind-Field="context.CreatedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="160" @bind-Field="context.ModifiedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+                <TableColumn Width="120" @bind-Field="context.ModifiedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
+            </TableColumns>
+        </AdminTable>
+    </SecondPaneTemplate>
+</Split>
+
+@code {
+    [Inject] IAggregateRootRepository<SysUser> _repo { get; set; }
+    [Inject] IAggregateRootRepository<SysOrg> _repoOrg { get; set; }
+    [Inject] IAggregateRootRepository<SysRole> _repRole { get; set; }
+
+    private List<TreeViewItem<long>> OrgTreeItems { get; set; }
+    private List<SelectedItem> RoleItems { get; set; }
+    AdminTable<SysUser> table;
+
+    /// <summary>
+    /// 组件初始化时异步执行的方法，用于加载组织树和角色数据。
+    /// </summary>
+    async protected override Task OnInitializedAsync()
+    {
+        var orgs = await _repoOrg.Select.ToListAsync();
+
+        OrgTreeItems = orgs.BuildTreeViews<SysOrg, long>(0, r => r.Label);
+        RoleItems = await _repRole.Select.ToListAsync(r => new SelectedItem(r.Id.ToString(), r.Name));
+    }
+
+    /// <summary>
+    /// 异步保存用户信息，支持插入新用户或更新现有用户。
+    /// </summary>
+    /// <param name="item">要保存的用户对象。</param>
+    /// <param name="changedType">用户信息的变更类型。</param>
+    /// <returns>操作成功返回 <c>true</c>。</returns>
+    [OperationLog]
+    private async Task<bool> OnSaveAsync(SysUser item, ItemChangedType changedType)
+    {
+        if (await _repo.Select.AnyAsync(changedType == ItemChangedType.Add
+            ? x => x.Username == item.Username
+            : x => x.Username == item.Username && x.Id != item.Id))
+        {
+            await ToastService.Error("用户保存失败", $"用户名{item.Username}已存在。");
+            return false;
+        }
+
+        if (!PBKDF2Encrypt.IsPbkdf2(item.Password))
+        {
+            item.Password = PBKDF2Encrypt.HashPassword(item.Password);
+        }
+        await _repo.InsertOrUpdateAsync(item);
+        return true;
+    }
+
+    /// <summary>
+    /// 异步删除选中的用户记录。
+    /// </summary>
+    /// <param name="rows">要删除的用户记录集合。</param>
+    /// <returns>操作成功返回 <c>true</c>。</returns>
+    [OperationLog]
+    private async Task<bool> OnDeleteAsync(IEnumerable<SysUser> rows)
+    {
+        foreach (var item in rows)
+        {
+            if (item.Roles.Any(x=>x.IsAdministrator))
+            {
+                await ToastService.Error("删除用户", "超级管理员不允许删除");
+                return false;
+            }
+            await _repo.DeleteAsync(item);
+        }
+
+        return true;
+    }
+    private async Task OnTreeItemClick(TreeViewItem<long> item)
+    {
+        await table.Reload(x => x.OrgId == item.Value);
+    }
+
+    /// <summary>
+    /// 导入数据处理
+    /// </summary>
+    /// <param name="item"></param>
+    private void ConvertImportItem(SysUser item)
+    {
+        var user = admin?.User;
+
+        if(user != null)
+        {
+            item.CreatedUserId = user.Id;
+            item.CreatedUserName = user.Username;
+            item.ModifiedUserId = user.Id;
+            item.ModifiedUserName = user.Username;
+            item.OrgId = user.OrgId;
+        }
+    }
+}
