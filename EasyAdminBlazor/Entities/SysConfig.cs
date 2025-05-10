@@ -15,11 +15,13 @@ namespace EasyAdminBlazor;
 /// 系统设置
 /// </summary>
 [Index("uk_code", "Code", true)]
+[AutoGenerateClass(Filterable =true)]
 public class SysConfig : EntityFull
 {
     /// <summary>
     /// 是否系统。指示该配置是否为系统级配置。
     /// </summary>
+    [AutoGenerateColumn(Ignore = true)]
     public bool IsSystem { get; set; }
 
     /// <summary>

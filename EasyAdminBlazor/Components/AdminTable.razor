@@ -57,6 +57,18 @@
     public Func<TItem, long>? GetParentId { get; set; }
 
     /// <summary>
+    /// 添加前要执行的操作
+    /// </summary>
+    [Parameter]
+    public EventCallback<AdminSaveEventArgs<TItem>> OnBeforeSaveAsync { get; set; }
+
+    /// <summary>
+    /// 删除前要执行的操作
+    /// </summary>
+    [Parameter]
+    public EventCallback<AdminRemoveEventArgs<TItem>> OnBeforeDeleteAsync { get; set; }
+
+    /// <summary>
     /// 使用数据权限，如果开启则实体必须实现IDataPermission, IEntityCreated接口
     /// </summary>
     [Parameter]
@@ -128,6 +140,7 @@
         ClientTableName = typeof(TItem).Name;
         SearchDialogIsDraggable = true;
         SearchDialogSize = Size.Large;
+        OnAfterDeleteAsync = null;
         EmptyImage = EmptyImage ?? "/images/empty.svg";
         PageItemsSource = new int[] { 20, 40, 80, 100 };
 
@@ -177,6 +190,13 @@
     [OperationLog]
     private async Task<bool> OnSaveDataAsync(TItem item, ItemChangedType changedType)
     {
+        if (OnBeforeSaveAsync.HasDelegate)
+        {
+            var args = new AdminSaveEventArgs<TItem> { Repo=_repo, Item = item, ChangedType=changedType };
+            await OnBeforeSaveAsync.InvokeAsync(args);
+            if (args.Cancel) return false;
+        }
+
         await _repo.InsertOrUpdateAsync(item);
         return true;
     }
@@ -189,6 +209,13 @@
     [OperationLog]
     private async Task<bool> OnDeleteDataAsync(IEnumerable<TItem> rows)
     {
+        if(OnBeforeDeleteAsync.HasDelegate)
+        {
+            var args = new AdminRemoveEventArgs<TItem> { Repo = _repo, Items = rows.ToList() };
+            await OnBeforeDeleteAsync.InvokeAsync(args);
+            if (args.Cancel) return false;
+        }
+
         foreach (var item in rows)
         {
             await _repo.DeleteAsync(item);

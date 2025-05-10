@@ -33,12 +33,14 @@ public abstract class EntityCreated<TKey> : Entity<TKey>, IEntityCreated
     /// </summary>
     [Column(Position = -22, CanUpdate = false)]
     [ExcelColumn(Ignore = true)]
+    [AutoGenerateColumn(Ignore = true)]
     public virtual long? CreatedUserId { get; set; }
 
     /// <summary>
     /// 创建者
     /// </summary>
     [Column(Position = -21, CanUpdate = false), MaxLength(50)]
+    [AutoGenerateColumn(Order = -61,IsVisibleWhenAdd =false,IsVisibleWhenEdit =false)]
     [DisplayName("创建人")]
     public virtual string CreatedUserName { get; set; }
 
@@ -46,6 +48,7 @@ public abstract class EntityCreated<TKey> : Entity<TKey>, IEntityCreated
     /// 创建时间
     /// </summary>
     [Column(Position = -20, CanUpdate = false, ServerTime = DateTimeKind.Local)]
+    [AutoGenerateColumn(Order = -71,Width =160, IsVisibleWhenAdd = false, IsVisibleWhenEdit = false)]
     [DisplayName("创建时间")]
     public virtual DateTime? CreatedTime { get; set; }
 }

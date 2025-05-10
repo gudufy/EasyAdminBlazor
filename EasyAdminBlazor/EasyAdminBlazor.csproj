@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BootstrapBlazor" Version="9.6.2-beta01" />
+    <PackageReference Include="BootstrapBlazor" Version="9.6.2-beta02" />
     <PackageReference Include="BootstrapBlazor.FontAwesome" Version="9.0.*" />
     <PackageReference Include="BootstrapBlazor.Middleware" Version="9.0.0" />
     <PackageReference Include="BootstrapBlazor.TableExport" Version="9.2.4" />

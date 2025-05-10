@@ -21,6 +21,7 @@ public abstract class EntitySoftDelete<TKey> : EntityModified<TKey>, IEntitySoft
     /// 是否删除
     /// </summary>
     [Column(Position = -9)]
+    [AutoGenerateColumn(Ignore = true)]
     public virtual bool IsDeleted { get; set; } = false;
 }
 

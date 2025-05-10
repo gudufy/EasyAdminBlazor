@@ -58,6 +58,7 @@ public partial class UserProfile
 /// 用户
 /// </summary>
 [Index("uk_username", "Username", true)]
+[AutoGenerateClass(Filterable =true)]
 public partial class SysUser : EntityFull, IDataPermission
 {
     /// <summary>
@@ -66,23 +67,8 @@ public partial class SysUser : EntityFull, IDataPermission
     [Column(StringLength = 50)]
     [DisplayName("用户名")]
     [Required(ErrorMessage = "{0}不能为空")]
+    [AutoGenerateColumn(Searchable =true)]
     public string Username { get; set; }
-
-    /// <summary>
-    /// 昵称
-    /// </summary>
-    [Column(StringLength = 50)]
-    [DisplayName("姓名")]
-    [Required(ErrorMessage = "{0}不能为空")]
-    public string Nickname { get; set; }
-
-    [Column(StringLength = 20)]
-    [DisplayName("手机")]
-    public string Mobile { get; set; }
-
-    [Column(StringLength = 50)]
-    [DisplayName("邮箱")]
-    public string Email { get; set; }
 
     /// <summary>
     /// 密码
@@ -92,26 +78,49 @@ public partial class SysUser : EntityFull, IDataPermission
     [Required(ErrorMessage = "{0}不能为空")]
     [StringLength(maximumLength: 200, MinimumLength = 6, ErrorMessage = "{0}最少为6个字符")]
     public string Password { get; set; }
+    /// <summary>
+    /// 昵称
+    /// </summary>
+    [Column(StringLength = 50)]
+    [DisplayName("姓名")]
+    [Required(ErrorMessage = "{0}不能为空")]
+    [AutoGenerateColumn(Searchable = true)]
+    public string Nickname { get; set; }
+
+    [Column(StringLength = 20)]
+    [DisplayName("手机")]
+    [AutoGenerateColumn(Searchable = true)]
+    public string Mobile { get; set; }
+
+    [Column(StringLength = 50)]
+    [DisplayName("邮箱")]
+    [AutoGenerateColumn(Searchable = true)]
+    public string Email { get; set; }
 
     [DisplayName("有效")]
+    [AutoGenerateColumn(Searchable = true)]
     public bool? IsEnabled { get; set; }
 
     [DisplayName("所属组织")]
     public long OrgId { get; set; }
 
     [Navigate("OrgId")]
+    [AutoGenerateColumn(Ignore = true)]
     public SysOrg Org { get; set; }
 
     [Column(StringLength = 500)]
+    [AutoGenerateColumn(Searchable = true)]
     [DisplayName("备注")]
     public string Description { get; set; }
 
+    [AutoGenerateColumn(Ignore = true)]
     public bool IsSystem { get; set; }
 
     /// <summary>
     /// 登陆时间
     /// </summary>
     [DisplayName("最后登录时间")]
+    [AutoGenerateColumn(Width = 160,IsVisibleWhenAdd =false,IsVisibleWhenEdit =false)]
     public DateTime LoginTime { get; set; }
 }
 

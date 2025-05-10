@@ -121,6 +121,7 @@ partial class SysUser
     public List<SysRole> Roles { get; set; }
 
     [Navigate(nameof(SysRoleUser.UserId))]
+    [AutoGenerateColumn(Ignore = true)]
     public List<SysRoleUser> RoleUsers { get; set; }
 
     /// <summary>
@@ -129,6 +130,7 @@ partial class SysUser
     /// </summary>
     [Column(IsIgnore = true)]
     [Display(Name ="角色")]
+    [AutoGenerateColumn(Ignore = true)]
     public IEnumerable<long> RoleIds
     {
         get

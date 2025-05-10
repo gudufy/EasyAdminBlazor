@@ -7,10 +7,9 @@
         <TreeView Items="@OrgTreeItems" OnTreeItemClick="OnTreeItemClick"></TreeView>
     </FirstPaneTemplate>
     <SecondPaneTemplate>
-        <AdminTable @ref="table" TItem="SysUser" EditDialogSize="Size.ExtraLarge" ShowImportButton ShowExportButton ShowExtendButtons ShowAdvancedSearch IsMultipleSelect IsPagination ShowSearch
-                    OnSaveAsync="OnSaveAsync" OnDeleteAsync="OnDeleteAsync" IncludePropertyName="Roles" ConvertImportItem="ConvertImportItem">
+        <AdminTable @ref="table" TItem="SysUser" EditDialogSize="Size.ExtraLarge" AutoGenerateColumns ShowImportButton ShowExportButton ShowExtendButtons ShowAdvancedSearch IsMultipleSelect IsPagination ShowSearch
+                    OnBeforeSaveAsync="OnBeforeSaveAsync" OnBeforeDeleteAsync="OnBeforeDeleteAsync" IncludePropertyName="Roles" ConvertImportItem="ConvertImportItem">
             <TableColumns>
-                <TableColumn @bind-Field="context.Username" Filterable="true" Searchable="true" />
                 <TableColumn @bind-Field="@context.Password" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true">
                     <EditTemplate Context="v">
                         <div class="col-12 col-sm-6">
@@ -18,12 +17,9 @@
                         </div>
                     </EditTemplate>
                 </TableColumn>
-                <TableColumn @bind-Field="context.Nickname" Filterable="true" Searchable="true" />
-                <TableColumn @bind-Field="context.Description" Filterable="true" Searchable="true" />
-                <TableColumn @bind-Field="context.IsEnabled" Filterable="true" Searchable="true" />
                 <TableColumn @bind-Field="@context.OrgId" Visible="false" IsVisibleWhenAdd="true" IsVisibleWhenEdit="true">
                     <EditTemplate Context="v">
-                        <div class="col-12">
+                        <div class="col-6">
                             <SelectTree @bind-Value="v.OrgId" TValue="long" Items="OrgTreeItems" />
                         </div>
                     </EditTemplate>
@@ -44,17 +40,12 @@
                         <FilterSelect DisplayText="@Localizer["Roles"]" TType="IEnumerable<long>" Items="RoleItems" @bind-Value="v.RoleIds" />
                     </SearchTemplate>
                 </TableColumn>
-                <TableColumn Width="160" @bind-Field="context.CreatedTime" Filterable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="120" @bind-Field="context.CreatedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="160" @bind-Field="context.ModifiedTime" Filterable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="120" @bind-Field="context.ModifiedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
             </TableColumns>
         </AdminTable>
     </SecondPaneTemplate>
 </Split>
 
 @code {
-    [Inject] IAggregateRootRepository<SysUser> _repo { get; set; }
     [Inject] IAggregateRootRepository<SysOrg> _repoOrg { get; set; }
     [Inject] IAggregateRootRepository<SysRole> _repRole { get; set; }
 
@@ -74,49 +65,41 @@
     }
 
     /// <summary>
-    /// 异步保存用户信息，支持插入新用户或更新现有用户。
+    /// 保存前的操作
     /// </summary>
-    /// <param name="item">要保存的用户对象。</param>
-    /// <param name="changedType">用户信息的变更类型。</param>
-    /// <returns>操作成功返回 <c>true</c>。</returns>
-    [OperationLog]
-    private async Task<bool> OnSaveAsync(SysUser item, ItemChangedType changedType)
+    /// <param name="e"></param>
+    /// <returns></returns>
+    private async Task OnBeforeSaveAsync(AdminSaveEventArgs<SysUser> e)
     {
-        if (await _repo.Select.AnyAsync(changedType == ItemChangedType.Add
-            ? x => x.Username == item.Username
-            : x => x.Username == item.Username && x.Id != item.Id))
+        if (await e.Repo.Select.AnyAsync(e.ChangedType == ItemChangedType.Add
+            ? x => x.Username == e.Item.Username
+            : x => x.Username == e.Item.Username && x.Id != e.Item.Id))
         {
-            await ToastService.Error("用户保存失败", $"用户名{item.Username}已存在。");
-            return false;
+            await ToastService.Error("用户保存失败", $"用户名{e.Item.Username}已存在。");
+            e.Cancel = true;
         }
 
-        if (!PBKDF2Encrypt.IsPbkdf2(item.Password))
+        if (!PBKDF2Encrypt.IsPbkdf2(e.Item.Password))
         {
-            item.Password = PBKDF2Encrypt.HashPassword(item.Password);
+            e.Item.Password = PBKDF2Encrypt.HashPassword(e.Item.Password);
         }
-        await _repo.InsertOrUpdateAsync(item);
-        return true;
     }
 
     /// <summary>
-    /// 异步删除选中的用户记录。
+    /// 检查要删除的数据
     /// </summary>
-    /// <param name="rows">要删除的用户记录集合。</param>
-    /// <returns>操作成功返回 <c>true</c>。</returns>
-    [OperationLog]
-    private async Task<bool> OnDeleteAsync(IEnumerable<SysUser> rows)
+    /// <param name="e"></param>
+    /// <returns></returns>
+    private async Task OnBeforeDeleteAsync(AdminRemoveEventArgs<SysUser> e)
     {
-        foreach (var item in rows)
+        foreach (var item in e.Items)
         {
             if (item.Roles.Any(x=>x.IsAdministrator))
             {
                 await ToastService.Error("删除用户", "超级管理员不允许删除");
-                return false;
+                e.Cancel =true;
             }
-            await _repo.DeleteAsync(item);
         }
-
-        return true;
     }
     private async Task OnTreeItemClick(TreeViewItem<long> item)
     {

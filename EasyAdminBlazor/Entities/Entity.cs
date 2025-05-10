@@ -28,6 +28,7 @@ public abstract class Entity<TKey> : IEntity<TKey>
     /// </summary>
     [Snowflake]
     [Column(Position = 1, IsIdentity = false, IsPrimary = true)]
+    [AutoGenerateColumn(Ignore = true)]
     public virtual TKey Id { get; set; }
 }
 

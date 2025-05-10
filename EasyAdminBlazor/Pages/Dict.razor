@@ -13,7 +13,7 @@
     <SecondPaneTemplate>
         @if (selectedCategory != null)
         {
-            <AdminTable TItem="SysDict" EditDialogSize="Size.Large" ShowExtendButtons IsMultipleSelect OnQueryAsync="OnQueryItemAsync" OnSaveAsync="OnSaveItemAsync">
+            <AdminTable TItem="SysDict" EditDialogSize="Size.Large" ShowExtendButtons IsMultipleSelect OnQueryAsync="OnQueryItemAsync" OnBeforeSaveAsync="OnBeforeSaveAsync">
                 <TableColumns>
                     <TableColumn @bind-Field="context.Name" />
                     <TableColumn @bind-Field="context.Value" />
@@ -54,17 +54,14 @@
     }
 
     /// <summary>
-    /// 异步保存字典项。
+    /// 保存前的操作
     /// </summary>
-    /// <param name="item">字典对象。</param>
-    /// <param name="changedType">变更类型。</param>
-    /// <returns>操作结果。</returns>
-    [OperationLog("{0}字典项")]
-    private async Task<bool> OnSaveItemAsync(SysDict item, ItemChangedType changedType)
+    /// <param name="e"></param>
+    /// <returns></returns>
+    private Task OnBeforeSaveAsync(AdminSaveEventArgs<SysDict> e)
     {
-        item.ParentId = selectedCategory.Id;
-        await _repo.InsertOrUpdateAsync(item);
-        return true;
+        if(e.ChangedType == ItemChangedType.Add) e.Item.ParentId = selectedCategory.Id;
+        return Task.CompletedTask;
     }
 
     /// <summary>

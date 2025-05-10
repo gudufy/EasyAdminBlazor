@@ -96,17 +96,8 @@
         </form>
     </TabItem>
     <TabItem Text="自定义">
-        <AdminTable TItem="SysConfig" ShowExtendButtons IsMultipleSelect EditDialogSize="Size.Large"
+        <AdminTable TItem="SysConfig" AutoGenerateColumns ShowExtendButtons IsMultipleSelect EditDialogSize="Size.Large"
                     DefaultWhere="@(x => !x.Code.Contains(":"))" class="mt-2" style="height:auto;">
-            <TableColumns>
-                <TableColumn @bind-Field="context.Code" />
-                <TableColumn @bind-Field="context.Name" />
-                <TableColumn @bind-Field="context.Content" Cols="12" />
-                <TableColumn Width="160" @bind-Field="context.CreatedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="120" @bind-Field="context.CreatedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="160" @bind-Field="context.ModifiedTime" Filterable="true" Searchable="true" Sortable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-                <TableColumn Width="120" @bind-Field="context.ModifiedUserName" Filterable="true" Searchable="true" IsVisibleWhenAdd="false" IsVisibleWhenEdit="false" />
-            </TableColumns>
         </AdminTable>
     </TabItem>
 </Tab>

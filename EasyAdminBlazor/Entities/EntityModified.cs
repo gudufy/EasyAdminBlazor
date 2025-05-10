@@ -39,6 +39,7 @@ public abstract class EntityModified<TKey> : EntityCreated<TKey>, IEntityModifie
     [JsonProperty(Order = 10000)]
     [JsonPropertyOrder(10000)]
     [ExcelColumn(Ignore = true)]
+    [AutoGenerateColumn(Ignore = true)]
     public virtual long? ModifiedUserId { get; set; }
 
     /// <summary>
@@ -47,6 +48,7 @@ public abstract class EntityModified<TKey> : EntityCreated<TKey>, IEntityModifie
     [Column(Position = -11, CanInsert = false), MaxLength(50)]
     [JsonProperty(Order = 10001)]
     [JsonPropertyOrder(10001)]
+    [AutoGenerateColumn(Order =-41, IsVisibleWhenAdd = false, IsVisibleWhenEdit = false)]
     [DisplayName("修改人")]
     public virtual string ModifiedUserName { get; set; }
 
@@ -55,6 +57,7 @@ public abstract class EntityModified<TKey> : EntityCreated<TKey>, IEntityModifie
     /// </summary>
     [JsonProperty(Order = 10002)]
     [JsonPropertyOrder(10002)]
+    [AutoGenerateColumn(Order = -51,Width =160, IsVisibleWhenAdd = false, IsVisibleWhenEdit = false)]
     [Column(Position = -10, CanInsert = false, ServerTime = DateTimeKind.Local)]
     [DisplayName("修改时间")]
     public virtual DateTime? ModifiedTime { get; set; }
